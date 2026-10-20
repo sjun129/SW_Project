@@ -13,14 +13,13 @@ const TABS: { name: string; label: string; icon: IconName }[] = [
   { name: 'myhome', label: '내 집', icon: 'user' },
 ];
 
-function TabBar({ state, navigateToTab }: BottomTabBarProps) {
+function TabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const active = state.routes[state.index]?.name;
   const item = (t: (typeof TABS)[number]) => {
     const on = t.name === active;
-    const key = state.routes.find((r) => r.name === t.name)?.key;
     return (
-      <Pressable key={t.name} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => key && navigateToTab(key)} style={st.item}>
+      <Pressable key={t.name} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => navigation.navigate(t.name)} style={st.item}>
         <Feather name={t.icon} size={22} color={on ? C.accent : C.muted} />
         <T size={11} w={on ? 'b' : 'm'} color={on ? C.accent : C.muted}>{t.label}</T>
       </Pressable>

@@ -2,7 +2,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { short } from '@/hash';
-import { useStore } from '@/store';
+import { buildReport } from '@/lib/docs';
+import { exportPdf } from '@/lib/pdf';
+import { errText, useStore } from '@/store';
 import { C } from '@/theme';
 import { Btn, Card, Footer, Header, Icon, Mascot, Row, Screen, T } from '@/ui';
 
@@ -13,15 +15,18 @@ const INFO = {
 const METHODS = ['토스페이', '신용·체크카드', '카카오페이'];
 
 export default function Payment() {
-  const { key = 'compare' } = useLocalSearchParams<{ key?: keyof typeof INFO }>();
-  const { pay, paid, chains } = useStore();
+  const { key: rawKey } = useLocalSearchParams<{ key?: string }>();
+  const key: keyof typeof INFO = rawKey === 'only' ? 'only' : 'compare';
+  const st = useStore();
+  const { pay, paid, chains } = st;
   const [method, setMethod] = useState(METHODS[0]);
   const [agree, setAgree] = useState(true);
   const [busy, setBusy] = useState(false);
-  const info = INFO[key] ?? INFO.compare;
+  const [err, setErr] = useState('');
+  const info = INFO[key];
 
   if (paid[key]) return (
-    <Screen header={<Header title="리포트 발급" />} footer={<Footer><Btn kind="ghost" label="PDF 공유" /><Btn label="리포트 목록으로" onPress={() => router.replace('/reports')} /></Footer>}>
+    <Screen header={<Header title="리포트 발급" />} footer={<Footer><Btn kind="ghost" label={busy ? '만드는 중…' : 'PDF 공유'} disabled={busy} onPress={async () => { setBusy(true); setErr(''); try { await exportPdf(await buildReport(st, key)); } catch (e) { setErr(errText(e)); } finally { setBusy(false); } }} /><Btn label="리포트 목록으로" onPress={() => router.replace('/reports')} /></Footer>}>
       <View style={{ alignItems: 'center', gap: 12, paddingTop: 28 }}>
         <Mascot name="proof" size={110} />
         <T size={20} w="b">{info.t}가 발급됐어요</T>
@@ -32,10 +37,15 @@ export default function Payment() {
           <Row key={k} gap={12}><T size={12.5} color={C.muted} style={{ width: 76 }}>{k}</T><T size={12.5} w={k === '결제' ? 'r' : 'mono'} style={{ flex: 1 }}>{v}</T></Row>
         ))}
       </Card>
+      {!!err && <T size={12.5} color={C.red}>{err}</T>}
     </Screen>
   );
 
-  const submit = () => { setBusy(true); setTimeout(() => { pay(key); setBusy(false); }, 900); };
+  // ponytail: mock PG delay; replace with the Toss Payments SDK + server-side confirmation
+  const submit = async () => {
+    setBusy(true); setErr('');
+    try { await new Promise((r) => setTimeout(r, 900)); await pay(key); } catch (e) { setErr(errText(e)); } finally { setBusy(false); }
+  };
   return (
     <Screen gap={12} header={<Header title="결제" />}
       footer={<Footer><Btn label={busy ? '결제 중…' : '9,900원 결제하기'} disabled={!agree || busy} onPress={submit} /></Footer>}>
@@ -61,6 +71,7 @@ export default function Payment() {
         </Row>
       </Pressable>
       {busy && <ActivityIndicator color={C.accent} />}
+      {!!err && <T size={12.5} color={C.red}>{err}</T>}
     </Screen>
   );
 }

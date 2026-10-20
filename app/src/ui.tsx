@@ -152,5 +152,6 @@ export const s = StyleSheet.create({
   footer: { backgroundColor: C.surface, flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 12 },
   sheet: { backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 10, gap: 14 },
   handle: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: C.line },
-  field: { backgroundColor: C.field, borderRadius: 12, paddingHorizontal: 16, height: 52, fontFamily: FONT.r, fontSize: 15, color: C.ink },
+  // Android: custom fonts add extra top/bottom font padding, which makes typed (esp. Korean IME) text jump vertically
+  field: { backgroundColor: C.field, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 0, height: 52, fontFamily: FONT.r, fontSize: 15, color: C.ink, includeFontPadding: false, textAlignVertical: 'center' },
 });

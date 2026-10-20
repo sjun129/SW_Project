@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
-import { useStore, type Stage } from '@/store';
+import { errText, useStore, type Stage } from '@/store';
 import { C } from '@/theme';
 import { Btn, Chip, IconBox, Row, s, Sheet, T, type IconName } from '@/ui';
 
@@ -14,12 +14,15 @@ const TYPES: { k: Stage; t: string; d: string; icon: IconName }[] = [
 export default function Capture() {
   const { zones, photosOf, addZone } = useStore();
   const [stage, setStage] = useState<Stage>('in');
-  const firstEmpty = zones.find((z) => !photosOf('in', z.id).length)?.id ?? zones[0].id;
+  const firstEmpty = zones.find((z) => !photosOf('in', z.id).length)?.id ?? zones[0]?.id ?? '';
   const [zone, setZone] = useState(firstEmpty);
   const [custom, setCustom] = useState<string | null>(null);
-  const open = () => {
-    const id = custom?.trim() ? addZone(custom.trim()).id : zone;
-    router.replace({ pathname: '/camera', params: { stage, zone: id } });
+  const [err, setErr] = useState('');
+  const open = async () => {
+    try {
+      const id = custom?.trim() ? (await addZone(custom.trim())).id : zone;
+      router.replace({ pathname: '/camera', params: { stage, zone: id } });
+    } catch (e) { setErr(errText(e)); }
   };
   return (
     <Sheet>
@@ -42,7 +45,8 @@ export default function Capture() {
         <Chip label="+ 직접 입력" on={custom !== null} onPress={() => setCustom('')} />
       </Row>
       {custom !== null && <TextInput nativeID="custom-zone" autoFocus value={custom} onChangeText={setCustom} placeholder="구역 이름" placeholderTextColor={C.muted} style={s.field} />}
-      <Btn label="카메라 열기" icon="camera" onPress={open} />
+      {!!err && <T size={12.5} color={C.red}>{err}</T>}
+      <Btn label="카메라 열기" icon="camera" onPress={open} disabled={!zones.length && !custom?.trim()} />
     </Sheet>
   );
 }

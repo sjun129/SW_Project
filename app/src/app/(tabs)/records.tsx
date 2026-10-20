@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { STAGE_LABEL, useStore, type Stage } from '@/store';
+import { errText, STAGE_LABEL, useStore, type Stage } from '@/store';
 import { C } from '@/theme';
 import { Btn, Chip, Header, Icon, Row, s, Screen, T } from '@/ui';
 
@@ -19,7 +19,11 @@ export default function Records() {
     return { z, ps, defects: ps.reduce((n, p) => n + p.defects.length, 0) };
   });
   const shown = rows.filter((r) => filter === 'all' || (filter === 'defect' ? r.defects > 0 : r.ps.length === 0));
-  const add = () => { if (!name.trim()) return; addZone(name.trim()); setName(''); setAdding(false); };
+  const [err, setErr] = useState('');
+  const add = async () => {
+    if (!name.trim()) return;
+    try { await addZone(name.trim()); setName(''); setAdding(false); setErr(''); } catch (e) { setErr(errText(e)); }
+  };
 
   return (
     <Screen gap={12} header={<Header title="기록" back={false} right={
@@ -40,6 +44,7 @@ export default function Records() {
       {adding && (
         <View style={{ gap: 8 }}>
           <TextInput nativeID="new-zone" autoFocus value={name} onChangeText={setName} placeholder="구역 이름 (예: 베란다)" placeholderTextColor={C.muted} style={s.field} onSubmitEditing={add} />
+          {!!err && <T size={12.5} color={C.red}>{err}</T>}
           <Row><Btn label="취소" kind="ghost" onPress={() => setAdding(false)} /><Btn label="추가" onPress={add} /></Row>
         </View>
       )}

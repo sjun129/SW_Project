@@ -6,7 +6,12 @@ import { fmtTime, uid, useStore } from '@/store';
 import { C } from '@/theme';
 import { Btn, Chip, Footer, Header, Icon, Legal, Row, Screen, T, TaggedPhoto } from '@/ui';
 
-const LABELS = ['곰팡이', '찢김', '스크래치', '얼룩'];
+const LABELS = ['곰팡이', '찢김', '스크래치', '얼룩', '파손', '들뜸', '누수 흔적'];
+const AI_NOTE = {
+  model: 'AI가 찾은 하자를 확인하세요. 틀린 건 지우고, 빠진 곳은 라벨을 고른 뒤 사진을 눌러 추가할 수 있어요.',
+  mock: '데모 모드라 예시 AI 결과를 보여 줘요. 라벨을 고른 뒤 사진을 눌러 직접 추가할 수도 있어요.',
+  none: 'AI 분석을 쓸 수 없어서 하자를 표시하지 못했어요. 원본은 안전하게 고정됐으니, 라벨을 고른 뒤 사진을 눌러 직접 표시해 주세요.',
+};
 
 export default function Tagging() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -17,8 +22,8 @@ export default function Tagging() {
   const zone = zones.find((z) => z.id === photo.zoneId);
   const nextZone = zones.find((z) => !photosOf(photo.stage, z.id).length);
 
-  const addAt = (x: number, y: number) => updateDefects(photo.id, [...photo.defects, { id: uid(), label, x: Math.max(0, x - 0.08), y: Math.max(0, y - 0.08), w: 0.16, h: 0.16, source: 'user' }]);
-  const remove = (did: string) => updateDefects(photo.id, photo.defects.filter((d) => d.id !== did));
+  const addAt = (x: number, y: number) => void updateDefects(photo.id, [...photo.defects, { id: uid(), label, x: Math.max(0, x - 0.08), y: Math.max(0, y - 0.08), w: 0.16, h: 0.16, source: 'user' }]);
+  const remove = (did: string) => void updateDefects(photo.id, photo.defects.filter((d) => d.id !== did));
 
   return (
     <Screen gap={12}
@@ -30,7 +35,7 @@ export default function Tagging() {
         <Btn label="저장" onPress={() => (router.canGoBack() ? router.back() : router.replace('/records'))} />
       </Footer>}>
       <TaggedPhoto src={photo.src} defects={photo.defects} height={268} onPressAt={addAt} />
-      <T size={12.5} color={C.muted}>AI가 찾은 하자를 확인하세요. 틀린 건 지우고, 빠진 곳은 라벨을 고른 뒤 사진을 눌러 추가할 수 있어요.</T>
+      <T size={12.5} color={photo.ai === 'none' ? C.red : C.muted}>{AI_NOTE[photo.ai ?? 'model']}</T>
       <Row gap={6} style={{ flexWrap: 'wrap' }}>{LABELS.map((l) => <Chip key={l} label={l} on={l === label} onPress={() => setLabel(l)} />)}</Row>
       <View style={{ backgroundColor: C.surface, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 4 }}>
         {photo.defects.length === 0 && <T size={13} color={C.muted} style={{ paddingVertical: 12 }}>표시된 하자가 없어요.</T>}

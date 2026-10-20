@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, Pressable, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CONFIRM_LABEL, useStore } from '@/store';
+import { CONFIRM_LABEL, errText, useStore } from '@/store';
 import { C } from '@/theme';
 import { Btn, Card, Footer, Icon, LOGO_COMPACT, Mascot, Pill, Row, s, Screen, T, TaggedPhoto } from '@/ui';
 
@@ -12,7 +12,9 @@ export default function Landlord() {
   const [signer, setSigner] = useState('김집주');
   const [objectFor, setObjectFor] = useState<string | null>(null);
   const [comment, setComment] = useState('');
-  useEffect(() => { landlordView(); }, [landlordView]);
+  const [err, setErr] = useState('');
+  useEffect(() => { landlordView().catch((e) => setErr(errText(e))); }, [landlordView]);
+  const respond = (okv: boolean, who: string, text?: string) => landlordRespond(okv, who, text).catch((e) => setErr(errText(e)));
   const ps = photosOf('in');
   const defects = ps.reduce((n, p) => n + p.defects.length, 0);
   const unit = lease.address.split(' ').at(-1);
@@ -44,8 +46,8 @@ export default function Landlord() {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       {bar}
       <Screen gap={12} footer={<Footer>
-        <Btn kind="ghost" label="이의 남기기" disabled={!comment.trim()} onPress={() => landlordRespond(false, signer, `${zones.find((z) => z.id === objectFor)?.name ?? ''}: ${comment}`)} />
-        <Btn label="확인했어요" onPress={() => landlordRespond(true, signer.trim() || '임대인')} />
+        <Btn kind="ghost" label="이의 남기기" disabled={!comment.trim()} onPress={() => respond(false, signer, `${zones.find((z) => z.id === objectFor)?.name ?? ''}: ${comment}`)} />
+        <Btn label="확인했어요" onPress={() => respond(true, signer.trim() || '임대인')} />
       </Footer>}>
         <Card style={{ gap: 8 }}>
           <Image source={LOGO_COMPACT} style={{ width: 68, height: 22 }} resizeMode="contain" />
@@ -66,6 +68,8 @@ export default function Landlord() {
             </Card>
           );
         })}
+        {!!err && <T size={12.5} color={C.red}>{err}</T>}
+        {confirm.status === 'none' && <T size={12.5} color={C.muted}>아직 보낸 확인 요청이 없어요. 확인서에서 먼저 보내 주세요.</T>}
         <View style={{ gap: 6 }}>
           <T size={12.5} w="m" color={C.muted}>확인자 이름</T>
           <TextInput nativeID="signer" value={signer} onChangeText={setSigner} style={s.field} />

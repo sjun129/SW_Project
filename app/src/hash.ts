@@ -10,7 +10,7 @@ const hex = (buf: ArrayBuffer) =>
 export const sha256Text = (s: string) =>
   Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, s, { encoding: Crypto.CryptoEncoding.HEX });
 
-async function readBytes(uri: string): Promise<Uint8Array<ArrayBuffer>> {
+export async function readBytes(uri: string): Promise<Uint8Array<ArrayBuffer>> {
   // web: CameraView returns a data: URL instead of a file path
   if (uri.startsWith('data:')) {
     const b64 = uri.slice(uri.indexOf(',') + 1);
@@ -21,10 +21,8 @@ async function readBytes(uri: string): Promise<Uint8Array<ArrayBuffer>> {
   return new Uint8Array(await new File(uri).bytes());
 }
 
-/** SHA-256 of the photo's original bytes. This is the value the server re-computes on receipt (FR-05). */
-export async function hashPhoto(uri: string): Promise<string> {
-  return hex(await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, await readBytes(uri)));
-}
+/** SHA-256 of the photo's original bytes (FR-05). */
+export const hashBytes = async (bytes: Uint8Array<ArrayBuffer>) => hex(await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, bytes));
 
 /** NFR-01 hash chain: each photo hash is chained onto the previous one in capture order. */
 export const chainNext = (prev: string, photoHash: string) => sha256Text(prev + photoHash);
