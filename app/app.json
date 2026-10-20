@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "자취실록",
+    "slug": "jachwi-sillok",
+    "scheme": "jachwisillok",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": { "image": "./assets/icon.png", "resizeMode": "contain", "backgroundColor": "#F5F7FA" },
+    "ios": { "supportsTablet": false },
+    "android": {
+      "adaptiveIcon": { "backgroundColor": "#FBF4E6", "foregroundImage": "./assets/icon.png" },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": { "favicon": "./assets/icon.png" },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      ["expo-camera", { "cameraPermission": "방 상태를 기록하려면 카메라 권한이 필요해요.", "recordAudioAndroid": false }]
+    ]
+  }
+}

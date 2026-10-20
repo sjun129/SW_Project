@@ -1,0 +1,464 @@
+<meta charset="utf-8">
+<title>방증 프로토타입</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* layout: 왼쪽 시연 목차 + 가운데 폰 프레임. 시각 언어는 Mealchat 홈 참고: 회색 바탕 + 흰 카드, 주황 강조, 왼쪽 색띠 목록, 밑줄 탭 */
+:root{
+  --bg:#f3f6fa; --surface:#ffffff; --sunk:#eef2f7; --line:#dfe5ee;
+  --ink:#1f2a3a; --muted:#6f7887; --seal:#3679d9; --seal-ink:#ffffff; --soft:#eaf2fd;
+  --sky:#90bffb; --mint:#8ac1b3; --cream:#f5f2ea;
+  --ok:#3a9a83; --warn:#3679d9; --hl:rgba(255,107,74,.92); --shadow:0 2px 12px rgba(31,42,58,.06);
+  --sans:"Noto Sans KR",system-ui,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#10151d; --surface:#18202b; --sunk:#202a37; --line:#2b3746;
+  --ink:#e8eef6; --muted:#9aa6b6; --seal:#6aa3f0; --seal-ink:#0c1522; --soft:#1b2a40;
+  --sky:#90bffb; --mint:#8ac1b3; --cream:#f5f2ea;
+  --ok:#7fcfb9; --warn:#6aa3f0; --shadow:none; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151d; --surface:#18202b; --sunk:#202a37; --line:#2b3746;
+  --ink:#e8eef6; --muted:#9aa6b6; --seal:#6aa3f0; --seal-ink:#0c1522; --soft:#1b2a40;
+  --sky:#90bffb; --mint:#8ac1b3; --cream:#f5f2ea;
+  --ok:#7fcfb9; --warn:#6aa3f0; --shadow:none; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--sans);padding-inline:16px;padding-block:24px;letter-spacing:-.01em}
+.wrap{display:flex;gap:32px;justify-content:center;align-items:flex-start;flex-wrap:wrap-reverse;max-width:1080px;margin:0 auto}
+aside{flex:1 1 260px;max-width:320px;min-width:0}
+aside h1{font-size:26px;font-weight:900;margin:0 0 2px;color:var(--ink);display:flex;align-items:center;gap:6px}
+aside h1 svg{width:34px}
+aside .sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+aside ol{list-style:none;padding:0;margin:0;display:grid;gap:2px}
+aside button{all:unset;cursor:pointer;display:flex;gap:10px;padding:6px 10px;border-radius:999px;font-size:14px;width:100%;box-sizing:border-box}
+aside button:hover,aside button:focus-visible{background:var(--surface)}
+aside button.on{background:var(--soft);color:var(--seal);font-weight:700;box-shadow:inset 0 0 0 1.5px var(--seal)}
+aside .id{font:12px/1.9 var(--mono);color:inherit;opacity:.65;min-width:44px}
+aside .note{margin-top:16px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+.phone{flex:0 1 390px;min-width:0;width:100%;height:800px;max-height:calc(100vh - 48px);min-height:640px;background:var(--bg);border:1px solid var(--line);border-radius:28px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 50px -30px rgba(0,0,0,.35);position:relative}
+@media (max-width:640px){.phone{border-radius:16px;height:auto;max-height:none;min-height:0}}
+.bar{display:flex;align-items:center;gap:8px;padding:14px 18px;background:var(--surface);font-weight:700;font-size:17px}
+.bar .back{all:unset;cursor:pointer;font-size:14px;line-height:1;width:24px;height:24px;display:grid;place-items:center;border:1px solid var(--line);border-radius:6px}
+.bar .grow{flex:1}
+.url{font:12px var(--mono);font-weight:400;color:var(--muted);background:var(--sunk);padding:6px 10px;border-radius:999px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scr{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.scr>*{flex-shrink:0}
+.foot{padding:12px 16px 16px;background:var(--surface);display:flex;gap:8px}
+h2{font-size:20px;line-height:1.35;margin:0;text-wrap:balance;font-weight:700}
+h3{font-size:15px;margin:0}
+p{margin:0}
+.muted{color:var(--muted)} .small{font-size:13px}
+.btn{all:unset;box-sizing:border-box;cursor:pointer;text-align:center;padding:13px 16px;border-radius:12px;font-weight:700;background:var(--seal);color:var(--seal-ink);flex:1}
+.btn.ghost{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.btn.kakao{background:#fee500;color:#191600}
+.btn.apple{background:var(--ink);color:var(--bg)}
+.word{display:flex;align-items:center;gap:6px;font-weight:900;font-size:19px;color:var(--ink)}
+.word svg{width:28px;height:auto}
+.mascot{flex:none;background:var(--cream);border-radius:18px;overflow:hidden;display:grid;place-items:center}
+.mascot img{display:block;width:100%;mix-blend-mode:multiply}
+.hero{border-radius:20px;overflow:hidden;background:var(--cream);position:relative;aspect-ratio:418/600;max-height:300px;width:100%}
+.hero img{width:100%;height:100%;object-fit:cover;object-position:50% 30%}
+.uses{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.use{background:var(--surface);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);display:grid}
+.use img{width:100%;aspect-ratio:210/170;object-fit:cover}
+.use div{padding:8px 10px 10px;display:grid;gap:2px}
+.use b{font-size:13.5px}.use span{font-size:12px;color:var(--muted)}
+.talk{display:flex;gap:12px;align-items:center;background:var(--surface);border-radius:14px;padding:10px 14px 10px 10px;box-shadow:var(--shadow)}
+.talk .mascot{width:64px}
+.lease{background:var(--surface);border-radius:16px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:10px;box-shadow:var(--shadow)}
+.lease>*:not(.mascot){grid-column:1}.lease .mascot{grid-column:2;grid-row:1/3;width:76px;align-self:start}.lease .term{grid-column:1/3}
+.lease .amt{display:grid}
+.lease .amt b{font-size:30px;font-weight:900;line-height:1.15;font-variant-numeric:tabular-nums}
+.lease .amt small{font-size:16px;margin-left:2px}
+.term{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font:11px var(--mono);color:var(--muted)}
+.steps{list-style:none;margin:0;padding:0;display:grid}
+.steps li{display:grid;grid-template-columns:28px 1fr;gap:12px;position:relative;padding-bottom:16px}
+.steps li:not(:last-child)::before{content:"";position:absolute;left:13px;top:28px;bottom:0;width:2px;background:var(--line)}
+.steps li.done:not(:last-child)::before{background:var(--seal)}
+.steps i{font-style:normal;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--surface);color:var(--muted);box-shadow:inset 0 0 0 1.5px var(--line)}
+.steps .done i{background:var(--seal);color:var(--seal-ink);box-shadow:none}
+.steps .now i{color:var(--seal);box-shadow:inset 0 0 0 2px var(--seal)}
+.steps li>div{padding-top:3px;display:grid;gap:8px;min-width:0}
+.steps .now>div{background:var(--soft);border-radius:12px;padding:10px 12px;margin-top:-4px}
+.steps li:not(.now):not(.done) b{color:var(--muted)}
+.seal-card{all:unset;cursor:pointer;box-sizing:border-box;display:grid;gap:4px;padding:12px 14px;border-radius:12px;border:1.5px dashed color-mix(in srgb,var(--seal) 45%,var(--line))}
+.link{all:unset;cursor:pointer;font-size:13px;color:var(--muted);text-align:center;padding:4px;text-decoration:underline;text-underline-offset:3px}
+.zones{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.zone{all:unset;cursor:pointer;background:var(--surface);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);display:grid}
+.zone.next{box-shadow:inset 0 0 0 2px var(--seal)}
+.zone .th{aspect-ratio:4/3;background:var(--sunk);display:grid;place-items:center;overflow:hidden}
+.zone .th img{width:100%;height:100%;object-fit:cover}
+.zone .th em{font-style:normal;font-size:22px;font-weight:900;color:var(--line);width:44px;height:44px;border:2px dashed var(--line);border-radius:10px;display:grid;place-items:center}
+.zone.next .th em{color:var(--seal);border-color:var(--seal)}
+.zone .cap{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:8px 10px;font-size:13px}
+.btn:focus-visible,.chip:focus-visible,.row:focus-visible,.zone:focus-visible,.seal-card:focus-visible,.link:focus-visible{outline:2px solid var(--seal);outline-offset:2px}
+.btn[disabled]{opacity:.35;pointer-events:none}
+.card{background:var(--surface);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow)}
+.card.active{background:var(--soft);box-shadow:inset 0 0 0 1.5px var(--seal)}
+.row{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px;background:var(--surface);border-radius:12px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.row .grow{flex:1;min-width:0}
+.pill{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+.pill.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+.pill.warn{background:var(--seal);color:var(--seal-ink)}
+.pill.seal{background:#ff5c3a;color:#fff}
+.prog{height:6px;background:var(--line);border-radius:99px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--seal)}
+label.f{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+input[type=text],input[type=date],textarea,select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+input:focus,textarea:focus{outline:none;border-color:var(--seal)}
+.hash{font:11.5px/1.5 var(--mono);word-break:break-all;color:var(--muted)}
+.frame{position:relative;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:4/3;max-width:100%}
+.frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.frame .ghostimg{opacity:.4;pointer-events:none}
+.frame .guide{position:absolute;inset:10%;border:2px dashed rgba(255,255,255,.7);border-radius:8px;pointer-events:none}
+.box{position:absolute;border:2px solid #ffd400;border-radius:4px}
+.box span{position:absolute;top:-22px;left:-2px;background:#ffd400;color:#000;font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;white-space:nowrap}
+.box.user{border-color:#4fc3ff}.box.user span{background:#4fc3ff}
+.box.diff{border-color:var(--hl);background:rgba(255,107,74,.18)}.box.diff span{background:var(--hl);color:#fff}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{all:unset;cursor:pointer;font-size:12.5px;padding:5px 12px;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);color:var(--muted)}
+.chip.on{background:var(--soft);color:var(--seal);box-shadow:inset 0 0 0 1.5px var(--seal);font-weight:700}
+.legal{font-size:12px;color:var(--muted);background:var(--surface);border-radius:10px;padding:8px 10px;box-shadow:inset 0 0 0 1px var(--line)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;min-width:0;font-variant-numeric:tabular-nums}
+.tl{list-style:none;margin:0;padding:0 0 0 14px;border-left:2px solid var(--line);display:grid;gap:12px}
+.tl li{position:relative;font-size:13.5px}
+.tl li::before{content:"";position:absolute;left:-20px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--seal)}
+.tl time{display:block;font:12px var(--mono);color:var(--muted)}
+.seal{align-self:center;width:96px;height:96px;border:3px solid var(--seal);border-radius:50%;color:var(--seal);display:grid;place-items:center;font-weight:700;font-size:20px;transform:rotate(-8deg)}
+.slider{--p:50%}
+.slider .after{clip-path:inset(0 0 0 var(--p))}
+.slider .knob{position:absolute;top:0;bottom:0;left:var(--p);width:2px;background:#fff;pointer-events:none}
+input[type=range]{width:100%;accent-color:var(--seal)}
+.hide-file{position:absolute;width:1px;height:1px;opacity:0}
+@media (prefers-reduced-motion:no-preference){.scr{animation:in .18s ease-out}@keyframes in{from{opacity:.4;transform:translateY(4px)}}}
+</style>
+
+<div class="wrap">
+  <aside>
+    <h1 id="logo-aside">방증</h1>
+    <p class="sub">MVP 클릭 프로토타입 · 설계서 v2026-10-14 기준</p>
+    <ol id="nav"></ol>
+    <p class="note">사진 해시(SHA-256)와 해시 체인은 브라우저에서 실제로 계산합니다. AI 하자 태깅, 서버 수신 시각, 카카오 공유, 토스 결제는 모의 동작입니다. 휴대폰에서 열면 사진 촬영 버튼이 카메라를 띄웁니다.</p>
+  </aside>
+  <section class="phone" id="app" aria-live="polite"></section>
+</div>
+
+<script>
+const ZONES=[
+ {name:'현관',tip:'바닥 타일과 현관문 하단이 함께 보이게 찍으세요.'},
+ {name:'벽지',tip:'창가 쪽 벽 모서리를 위주로, 곰팡이·들뜸을 가까이서.'},
+ {name:'바닥',tip:'침대·책상 자리 바닥의 찍힘과 스크래치를 비스듬히.'},
+ {name:'욕실 실리콘',tip:'세면대·욕조 실리콘 줄눈이 화면 가운데 오게.'},
+ {name:'창틀',tip:'창틀 레일과 방충망 모서리를 함께.'},
+ {name:'옵션 가전',tip:'냉장고·세탁기 문을 연 상태로 내부까지.'},
+];
+const LABELS=['곰팡이','찢김','스크래치','얼룩'];
+// 샘플 사진의 하자 위치(구역 index → 하자 목록). 퇴거 샘플은 입주 하자 + 신규 하자.
+const SAMPLE={
+ in:{1:[{label:'곰팡이',x:.66,y:.16,w:.2,h:.24}],2:[{label:'스크래치',x:.2,y:.5,w:.3,h:.16}]},
+ out:{1:[{label:'곰팡이',x:.66,y:.16,w:.2,h:.24},{label:'찢김',x:.18,y:.5,w:.2,h:.26}],2:[{label:'스크래치',x:.2,y:.5,w:.3,h:.16}],3:[{label:'곰팡이',x:.38,y:.56,w:.28,h:.14}]},
+};
+const fresh=()=>({photos:ZONES.map(()=>null),chain:null,done:null});
+const S={
+ screen:'SC-01', zone:0, kind:'in', tagLabel:'곰팡이',
+ lease:{address:'부산 금정구 장전동 ○○빌 302호',start:'2026-03-01',end:'2027-02-28',deposit:'5,000,000',landlord:'010-1234-5678'},
+ leaseSaved:false,
+ insp:{in:fresh(),out:fresh(),only:fresh()},
+ conf:{status:'none',token:null,comments:{},signer:'',log:[]},
+ diff:null, onlyCheck:{}, paid:false, reportType:'compare',
+};
+const NAV=[
+ ['SC-01','온보딩 · 로그인'],['SC-03','집 등록'],['SC-02','홈'],['SC-04','입주 기록 시작'],['SC-05','구역 촬영'],
+ ['SC-06','하자 태깅 확인'],['SC-07','확인서 미리보기'],['SC-08','임대인 공유'],['SC-09','임대인 확인 · 서명 (웹)'],
+ ['SC-10','기록 타임라인'],['SC-11','퇴거 촬영'],['SC-12','비교 결과'],['SC-13','리포트 결제'],['FR-20','퇴거 단독 리포트'],
+];
+const $=s=>document.querySelector(s);
+const LOGO='<svg viewBox="0 0 48 34" aria-hidden="true"><path d="M5 19 24 5l19 14" fill="none" stroke="var(--seal)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><rect x="33" y="3" width="5" height="9" rx="1.5" fill="var(--seal)"/><path d="m17 21 5 5 9-9" fill="none" stroke="var(--seal)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const M=(k,w=72)=>`<span class="mascot" style="width:${w}px"><img src="assets/m-${k}.png" alt=""></span>`;
+const talk=(k,t,s='')=>`<div class="talk">${M(k,64)}<p><b>${t}</b>${s?`<br><span class="small muted">${s}</span>`:''}</p></div>`;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=t=>new Date(t).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const short=h=>h?h.slice(0,12)+'…'+h.slice(-6):'—';
+const log=msg=>S.conf.log.push({t:Date.now(),msg});
+
+// ---------- 해시 ----------
+const hex=buf=>[...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+const sha=async data=>hex(await crypto.subtle.digest('SHA-256',typeof data==='string'?new TextEncoder().encode(data):data));
+async function chainOf(photos){ // NFR-01: 촬영 순서대로 prev_hash와 이어 묶음
+  let prev='0'.repeat(64);
+  for(const p of photos){ if(!p) continue; p.prev=prev; prev=await sha(prev+p.sha); }
+  return prev;
+}
+
+// ---------- 샘플 사진 (실제 카메라 없이 시연) ----------
+function rnd(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function sampleImage(z,variant){
+  const c=document.createElement('canvas');c.width=640;c.height=480;const g=c.getContext('2d');const r=rnd(z*97+11);
+  const W=640,H=480;
+  const fills=['#9aa3a6','#ece6d8','#b98a5a','#f4f6f7','#d9dfe2','#e9ecee'];
+  g.fillStyle=fills[z];g.fillRect(0,0,W,H);
+  if(z===0){for(let x=0;x<W;x+=80)for(let y=240;y<H;y+=80){g.strokeStyle='#7d8689';g.strokeRect(x,y,80,80)}g.fillStyle='#5c4a3a';g.fillRect(180,20,280,220)}
+  if(z===1){g.fillStyle='rgba(0,0,0,.04)';for(let x=0;x<W;x+=24)g.fillRect(x,0,12,H)}
+  if(z===2){for(let y=0;y<H;y+=40){g.fillStyle=y/40%2?'#b08050':'#c29464';g.fillRect(0,y,W,38)}}
+  if(z===3){for(let x=0;x<W;x+=64)for(let y=0;y<H;y+=64){g.strokeStyle='#cfd6d9';g.strokeRect(x,y,64,64)}g.fillStyle='#fff';g.fillRect(0,280,W,200);g.fillStyle='#dfe4e6';g.fillRect(0,272,W,10)}
+  if(z===4){g.fillStyle='#8fb7d6';g.fillRect(60,40,520,330);g.strokeStyle='#f2f2f2';g.lineWidth=26;g.strokeRect(60,40,520,330);g.fillStyle='#b9c1c5';g.fillRect(40,380,560,40)}
+  if(z===5){g.fillStyle='#cfd5d8';g.fillRect(150,30,340,430);g.fillStyle='#bfc6c9';g.fillRect(150,200,340,6);g.fillStyle='#8a9295';g.fillRect(450,90,10,70);g.fillRect(450,240,10,90)}
+  for(let i=0;i<400;i++){g.fillStyle=`rgba(0,0,0,${r()*.05})`;g.fillRect(r()*W,r()*H,2,2)} // 질감
+  for(const d of SAMPLE[variant][z]||[]){
+    const x=d.x*W,y=d.y*H,w=d.w*W,h=d.h*H,rr=rnd(Math.round(x*y));
+    if(d.label==='곰팡이'){for(let i=0;i<70;i++){g.fillStyle=`rgba(${30+rr()*30},${50+rr()*30},${30},${.25+rr()*.4})`;g.beginPath();g.arc(x+w*(.15+rr()*.7),y+h*(.15+rr()*.7),2+rr()*7,0,7);g.fill()}}
+    if(d.label==='스크래치'){g.strokeStyle='rgba(60,35,15,.75)';g.lineWidth=2;for(let i=0;i<4;i++){g.beginPath();g.moveTo(x+rr()*w*.2,y+h*(.2+i*.18));g.lineTo(x+w*(.8+rr()*.2),y+h*(.1+i*.2));g.stroke()}}
+    if(d.label==='찢김'){g.fillStyle='#fffaf0';g.beginPath();g.moveTo(x,y+h*.2);g.lineTo(x+w*.6,y);g.lineTo(x+w,y+h*.5);g.lineTo(x+w*.5,y+h);g.lineTo(x+w*.1,y+h*.8);g.closePath();g.fill();g.strokeStyle='rgba(0,0,0,.35)';g.lineWidth=2;g.stroke()}
+  }
+  return new Promise(res=>c.toBlob(b=>res(b),'image/jpeg',.9));
+}
+
+// ---------- 촬영 처리 ----------
+async function addPhoto(blob,sampleVariant){
+  const I=S.insp[S.kind], z=S.zone;
+  const buf=await blob.arrayBuffer();
+  const deviceHash=await sha(buf);
+  const serverHash=await sha(buf); // 모의: 서버가 수신 즉시 재계산 (FR-05)
+  const now=Date.now();
+  I.photos[z]={url:URL.createObjectURL(blob),sha:serverHash,deviceHash,deviceTs:now,serverTs:now+180+Math.round(Math.random()*400),
+    gps:'35.231, 129.084',defects:sampleVariant?(SAMPLE[sampleVariant][z]||[]).map(d=>({...d,source:'ai'})):[] ,sample:!!sampleVariant};
+  I.chain=await chainOf(I.photos);
+  go(S.kind==='in'?'SC-06':S.kind==='out'?'SC-11':'FR-20');
+}
+function pickFile(){ $('#file').click() }
+async function onFile(e){ const f=e.target.files[0]; if(f) await addPhoto(f,null) }
+async function useSample(){ await addPhoto(await sampleImage(S.zone,S.kind==='in'?'in':'out'),S.kind==='in'?'in':'out') }
+
+// ---------- 전후 비교 (픽셀 차이 → 격자 박스) ----------
+const loadImg=u=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=u});
+async function diffBoxes(a,b){
+  const W=64,H=48,cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d',{willReadFrequently:true});
+  const px=async u=>{g.drawImage(await loadImg(u),0,0,W,H);return g.getImageData(0,0,W,H).data};
+  const A=await px(a),B=await px(b),G=8,cw=W/G,ch=H/6,cells=[];
+  for(let gy=0;gy<6;gy++)for(let gx=0;gx<G;gx++){let s=0;
+    for(let y=gy*ch;y<(gy+1)*ch;y++)for(let x=gx*cw;x<(gx+1)*cw;x++){const i=(y*W+x)*4;s+=Math.abs(A[i]-B[i])+Math.abs(A[i+1]-B[i+1])+Math.abs(A[i+2]-B[i+2])}
+    if(s/(cw*ch*3)>14)cells.push([gx,gy])}
+  // ponytail: 인접 셀 병합 없이 셀 묶음의 외곽 박스 1개. 실제 서비스는 비전 모델 응답(FR-15)으로 대체
+  if(!cells.length)return[];
+  const xs=cells.map(c=>c[0]),ys=cells.map(c=>c[1]);
+  return[{label:'변화 감지',x:Math.min(...xs)/G,y:Math.min(...ys)/6,w:(Math.max(...xs)-Math.min(...xs)+1)/G,h:(Math.max(...ys)-Math.min(...ys)+1)/6}];
+}
+async function runCompare(){
+  const res=[];
+  for(let z=0;z<ZONES.length;z++){const a=S.insp.in.photos[z],b=S.insp.out.photos[z];if(!a||!b)continue;
+    const boxes=await diffBoxes(a.url,b.url);
+    const known=new Set(a.defects.map(d=>d.label));
+    const newD=b.defects.filter(d=>!a.defects.some(o=>o.label===d.label&&Math.abs(o.x-d.x)<.05));
+    res.push({z,boxes,newD,cls:newD.map(d=>d.label==='곰팡이'&&z===3?['통상 손모 가능성','환기·사용에 따른 자연 발생일 수 있습니다.']:['임차인 과실 의심','입주 기록에 없던 물리적 손상입니다.'])});
+  }
+  S.diff=res;go('SC-12');
+}
+
+// ---------- 화면 ----------
+const done=k=>S.insp[k].photos.filter(Boolean).length;
+const bar=(title,back)=>`<div class="bar">${back?`<button class="back" onclick="go('${back}')" aria-label="뒤로">‹</button>`:''}<span class="grow">${title}</span></div>`;
+const img=(p,boxes=[],extra='')=>`<div class="frame" ${extra}><img src="${p.url}" alt="">${boxes.map(d=>`<div class="box ${d.source==='user'?'user':d.label==='변화 감지'?'diff':''}" style="left:${d.x*100}%;top:${d.y*100}%;width:${d.w*100}%;height:${d.h*100}%"><span>${esc(d.label)}</span></div>`).join('')}</div>`;
+const LEGAL=`<p class="legal">AI 판단은 참고용이며 법률 자문이 아닙니다. 법원 채택을 보장하지 않습니다.</p>`;
+const statusPill=()=>({none:'<span class="pill">미발송</span>',sent:'<span class="pill warn">확인 대기</span>',viewed:'<span class="pill warn">열람함</span>',signed:'<span class="pill ok">확인 완료</span>',objected:'<span class="pill seal">이의 있음</span>'}[S.conf.status]);
+
+const V={
+'SC-01':()=>`<div class="bar"><span class="word">${LOGO}방증</span></div>
+<div class="scr" style="gap:16px">
+  <div class="hero"><img src="assets/u-hero.jpg" alt="휴대폰을 든 방증 마스코트"></div>
+  <div><h2 style="font-size:24px">내 보증금을 지키는<br>가장 확실한 방법</h2><p class="small muted" style="margin-top:6px">방증과 함께라면 입주부터 퇴거까지, 모든 순간이 증거가 됩니다.</p></div>
+  <div class="uses">${[['shoot','입주 기록 촬영','가이드를 따라 간편하게 촬영해요.'],['landlord','집주인 확인','카카오톡 링크로 간편하게 서명해요.'],['report','비교 리포트','입주 대비 달라진 부분을 한눈에 확인해요.'],['shield','보증금 보호','위변조 없는 기록으로 안심할 수 있어요.']].map(([k,t,d])=>`<div class="use"><img src="assets/u-${k}.jpg" alt=""><div><b>${t}</b><span>${d}</span></div></div>`).join('')}</div>
+</div>
+<div class="foot" style="flex-direction:column"><button class="btn kakao" onclick="go(S.leaseSaved?'SC-02':'SC-03')">카카오로 시작하기</button><button class="btn apple" onclick="go(S.leaseSaved?'SC-02':'SC-03')">Apple로 계속하기</button></div>`,
+
+'SC-03':()=>{const L=S.lease;return`${bar('집 등록','SC-01')}
+<div class="scr">
+  <h2>어느 집에 들어가나요?</h2>
+  <label class="f">주소<input type="text" id="f-addr" value="${esc(L.address)}"></label>
+  <div style="display:flex;gap:8px"><label class="f" style="flex:1">계약 시작<input type="date" id="f-start" value="${L.start}"></label><label class="f" style="flex:1">계약 만료<input type="date" id="f-end" value="${L.end}"></label></div>
+  <label class="f">보증금(원)<input type="text" id="f-dep" inputmode="numeric" value="${esc(L.deposit)}"></label>
+  <label class="f">임대인 연락처<input type="text" id="f-ll" inputmode="tel" value="${esc(L.landlord)}"></label>
+  <p class="small muted">임대인 연락처는 확인 링크를 보낼 때만 쓰고 마케팅에 쓰지 않습니다.</p>
+</div>
+<div class="foot"><button class="btn" onclick="saveLease()">등록하기</button></div>`},
+
+'SC-02':()=>{const n=done('in'),c=S.conf.status,days=Math.ceil((new Date(S.lease.end)-Date.now())/864e5),I=S.insp.in,shots=I.photos.filter(Boolean);
+ const cur=n<6?0:c!=='signed'?1:done('out')?3:2;
+ const steps=[
+  ['입주 기록',`${n}/6 구역`,n<6?['이어서 촬영하기','SC-04']:null],
+  ['임대인 확인',{none:'아직 보내지 않음',sent:'응답 대기',viewed:'열람함 · 응답 대기',objected:'이의 도착',signed:esc(S.conf.signer)+' 확인'}[c],
+    c==='none'?['확인서 보내기','SC-07']:['응답 상태 보기','SC-08']],
+  ['거주 중',`하자 신고 ${S.conf.log.filter(l=>l.msg.startsWith('거주 중')).length}건`,['하자 신고 · 타임라인','SC-10']],
+  ['퇴거 비교',`계약 만료 D-${days}`,['퇴거 촬영 시작','SC-11']],
+ ];
+ return`<div class="bar"><span class="word">${LOGO}방증</span><span class="grow"></span><button class="back" onclick="go('SC-03')" aria-label="집 정보 수정">✎</button></div>
+<div class="scr">
+  <section class="lease">
+    <span class="small muted">${esc(S.lease.address)}</span>
+    ${M(['smile','work','thumbs','search'][cur],76)}
+    <div class="amt"><span class="small muted">지키는 보증금</span><b>${esc(S.lease.deposit)}<small>원</small></b></div>
+    <div class="term"><span>${S.lease.start}</span><span class="prog"><i style="width:${Math.min(100,Math.max(0,(Date.now()-new Date(S.lease.start))/(new Date(S.lease.end)-new Date(S.lease.start))*100))}%"></i></span><span>${S.lease.end}</span></div>
+  </section>
+  <ol class="steps">${steps.map(([t,s,a],i)=>`<li class="${i<cur?'done':i===cur?'now':''}"><i>${i<cur?'✓':i+1}</i><div><p><b>${t}</b><span class="small muted"> · ${s}</span></p>
+    ${i===cur&&a?`<button class="btn" onclick="${i===3?"S.kind='out';":''}go('${a[1]}')">${a[0]}</button>`:''}</div></li>`).join('')}</ol>
+  <button class="seal-card" onclick="go('SC-10')">
+    <span class="small muted">원본 봉인 · 해시 체인</span>
+    <span class="hash">${I.chain||'아직 봉인된 사진이 없습니다'}</span>
+    <span class="small">${shots.length}장 고정${shots.length?` · 마지막 서버 확인 ${fmt(Math.max(...shots.map(p=>p.serverTs)))}`:''} ›</span>
+  </button>
+  <button class="link" onclick="S.kind='only';S.zone=0;go('FR-20')">입주 기록이 없나요? 퇴거 단독 리포트 받기 (9,900원) ›</button>
+</div>`},
+
+'SC-04':()=>{S.kind='in';const n=done('in');return`${bar('입주 기록','SC-02')}
+<div class="scr">
+  ${talk(n<6?'work':'thumbs',n<6?'6개 구역을 순서대로 찍어요':'모든 구역을 다 찍었어요!',n<6?'한 화면에 한 구역씩, 10분이면 끝나요.':'이제 확인서를 만들어 집주인에게 보내요.')}
+  <div class="prog"><i style="width:${n/6*100}%"></i></div>
+  <p class="small muted">${n}/6 완료 · 남은 예상 시간 약 ${Math.max(1,(6-n)*1.5|0)}분</p>
+  <div class="zones">${ZONES.map((z,i)=>{const p=S.insp.in.photos[i];return`<button class="zone ${!p&&i===S.insp.in.photos.findIndex(x=>!x)?'next':''}" onclick="S.zone=${i};go('${p?'SC-06':'SC-05'}')"><span class="th">${p?`<img src="${p.url}" alt="">`:`<em>${i+1}</em>`}</span><span class="cap"><b>${z.name}</b>${p?`<span class="pill ${p.defects.length?'warn':'ok'}">하자 ${p.defects.length}</span>`:'<span class="small muted">촬영 전</span>'}</span></button>`}).join('')}</div>
+</div>
+<div class="foot"><button class="btn" ${n<6?'disabled':''} onclick="go('SC-07')">확인서 만들기</button></div>`},
+
+'SC-05':()=>{const z=ZONES[S.zone];return`${bar(`${S.zone+1}/6 · ${z.name}`,'SC-04')}
+<div class="scr">
+  <div class="frame"><div class="guide"></div><div style="position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:13px;opacity:.8">가이드 프레임 안에 맞춰 주세요</div></div>
+  <div class="card"><b>촬영 팁</b><span class="small">${z.tip}</span></div>
+  <p class="small muted">갤러리 업로드는 막혀 있습니다. 찍는 즉시 기기에서 해시를 만들고, 서버가 받은 시각에 다시 계산해 대조합니다.</p>
+</div>
+<div class="foot"><input type="file" accept="image/*" capture="environment" id="file" class="hide-file" onchange="onFile(event)"><button class="btn ghost" onclick="useSample()">샘플 사진</button><button class="btn" onclick="pickFile()">촬영</button></div>`},
+
+'SC-06':()=>{const p=S.insp.in.photos[S.zone],z=ZONES[S.zone];return`${bar(`${z.name} · 하자 확인`,'SC-04')}
+<div class="scr">
+  ${img(p,p.defects,`onclick="addTag(event)" style="cursor:crosshair"`)}
+  <p class="small muted">${p.defects.length?'노란 박스는 AI가 찾은 하자입니다. 틀린 건 지우고, 빠진 곳은 사진을 눌러 추가하세요.':'AI가 찾은 하자가 없습니다. 놓친 곳이 있으면 라벨을 고르고 사진을 누르세요.'}</p>
+  <div class="chips">${LABELS.map(l=>`<button class="chip ${S.tagLabel===l?'on':''}" onclick="S.tagLabel='${l}';render()">${l}</button>`).join('')}</div>
+  ${p.defects.map((d,i)=>`<div class="row" style="cursor:default"><span class="grow">${esc(d.label)} <span class="small muted">· ${d.source==='ai'?'AI':'직접 추가'}</span></span><button class="chip" onclick="delTag(${i})">삭제</button></div>`).join('')}
+  <div class="card"><b class="small">원본 고정</b><dl class="kv"><dt>기기 해시</dt><dd class="hash">${short(p.deviceHash)}</dd><dt>서버 해시</dt><dd class="hash">${short(p.sha)} ${p.deviceHash===p.sha?'<span class="pill ok">일치</span>':'<span class="pill seal">불일치</span>'}</dd><dt>기기 촬영</dt><dd>${fmt(p.deviceTs)}</dd><dt>서버 확인</dt><dd>${fmt(p.serverTs)}</dd><dt>위치</dt><dd>${p.gps}</dd></dl></div>
+  ${LEGAL}
+</div>
+<div class="foot"><button class="btn ghost" onclick="retake()">다시 찍기</button><button class="btn" onclick="nextZone()">${done('in')<6?'다음 구역':'구역 목록'}</button></div>`},
+
+'SC-07':()=>{const I=S.insp.in,all=I.photos.filter(Boolean),nd=all.reduce((a,p)=>a+p.defects.length,0);return`${bar('입주 상태 확인서','SC-04')}
+<div class="scr">
+  ${all.length<6?'<p class="legal">아직 촬영하지 않은 구역이 있습니다. 미리보기는 찍은 구역만 보여 줍니다.</p>':''}
+  <div class="card" style="gap:12px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h3>입주 상태 확인서</h3><span class="small muted">PDF 미리보기</span></div>
+    <dl class="kv"><dt>주소</dt><dd>${esc(S.lease.address)}</dd><dt>기록일</dt><dd>${all.length?fmt(all[0].serverTs):'—'}</dd><dt>사진 · 하자</dt><dd>${all.length}장 · ${nd}건</dd><dt>chain_hash</dt><dd class="hash">${I.chain||'—'}</dd></dl>
+    ${ZONES.map((z,i)=>{const p=I.photos[i];return p?`<div style="display:flex;gap:10px;align-items:center"><img src="${p.url}" alt="" style="width:64px;height:48px;object-fit:cover;border-radius:6px"><div class="small" style="min-width:0"><b>${z.name}</b> · ${p.defects.length?p.defects.map(d=>esc(d.label)).join(', '):'이상 없음'}<div class="hash">${short(p.sha)}</div></div></div>`:''}).join('')}
+  </div>
+  ${LEGAL}
+</div>
+<div class="foot"><button class="btn" ${all.length?'':'disabled'} onclick="go('SC-08')">집주인에게 확인 요청</button></div>`},
+
+'SC-08':()=>{const c=S.conf;return`${bar('임대인 공유','SC-02')}
+<div class="scr">
+  ${talk({signed:'joy',objected:'worry',none:'smile'}[c.status]||'done',{signed:'집주인 확인 완료!',objected:'이의가 도착했어요',none:'집주인에게 확인을 받아요'}[c.status]||'집주인 응답을 기다리고 있어요',{signed:'입주 기록이 잠겨 퇴거 비교의 기준점이 됐어요.',objected:'항목을 고쳐 다시 보낼 수 있어요.'}[c.status]||'')}
+  <p class="muted small">"서로 편하자고 남기는 기록"이라는 안내와 함께 보내집니다. 집주인이 응답하지 않아도 발송·열람 이력이 증빙으로 남습니다.</p>
+  <div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><b>응답 상태</b>${statusPill()}</div>
+   ${c.token?`<p class="hash">bangjeung.kr/c/${c.token} · 만료 7일</p>`:''}</div>
+  ${c.status==='objected'?`<div class="card"><b>항목별 이의</b>${Object.entries(c.comments).map(([z,t])=>`<p class="small"><b>${ZONES[z].name}</b> · ${esc(t)}</p>`).join('')}<p class="small muted">확인서를 고쳐 다시 보내면 새 확인 요청이 만들어집니다.</p></div>`:''}
+  ${c.status==='signed'?`<div class="card"><b>${esc(c.signer)} 님이 확인했습니다</b><p class="small muted">이 시점의 기록과 발송 이력이 잠겼습니다. 퇴거 비교의 기준점이 됩니다.</p></div>`:''}
+</div>
+<div class="foot" style="flex-direction:column">
+ ${c.status==='none'||c.status==='objected'?`<div style="display:flex;gap:8px"><button class="btn kakao" onclick="send('카카오톡')">카카오톡 공유</button><button class="btn ghost" onclick="send('문자')">문자 발송</button></div>`:''}
+ ${['sent','viewed'].includes(c.status)?`<button class="btn" onclick="go('SC-09')">임대인 화면으로 보기 (시연)</button><button class="btn ghost" onclick="noReply()">미응답으로 잠그기</button>`:''}
+ ${c.status==='signed'?`<button class="btn" onclick="go('SC-02')">홈으로</button>`:''}
+</div>`},
+
+'SC-09':()=>{const c=S.conf,I=S.insp.in;if(c.status==='sent'){c.status='viewed';log('임대인이 링크를 열람함')}
+ if(!c.token)return`<div class="bar"><span class="url">bangjeung.kr/c/—</span></div><div class="scr"><p class="muted">아직 발송된 확인 링크가 없습니다. 세입자 앱의 임대인 공유 화면에서 먼저 보내 주세요.</p><button class="btn ghost" style="flex:0" onclick="go('SC-08')">임대인 공유로 이동</button></div>`;
+ return`<div class="bar"><span class="url">bangjeung.kr/c/${c.token}</span><button class="back small" onclick="go('SC-08')" aria-label="앱으로 돌아가기">✕</button></div>
+<div class="scr">
+  <p class="small muted">웹 · 앱 설치 없음</p>
+  <h2>세입자가 입주 상태 기록을 보냈어요</h2>
+  <p class="small">${esc(S.lease.address)} · 서로 편하자고 남기는 기록입니다. 사진은 촬영 즉시 고정되어 수정할 수 없습니다.</p>
+  ${ZONES.map((z,i)=>{const p=I.photos[i];return p?`<div class="card">${img(p,p.defects)}<b>${z.name}</b><span class="small muted">${p.defects.length?p.defects.map(d=>esc(d.label)).join(', '):'하자 표시 없음'} · 서버 확인 ${fmt(p.serverTs)}</span>
+   <label class="f">이의가 있으면 적어 주세요 (선택)<textarea id="obj-${i}" rows="2">${esc(c.comments[i]||'')}</textarea></label></div>`:''}).join('')}
+  <label class="f">확인자 이름<input type="text" id="signer" value="${esc(c.signer||'김집주')}"></label>
+</div>
+<div class="foot"><button class="btn ghost" onclick="landlord('object')">이의 남기기</button><button class="btn" onclick="landlord('sign')">확인했어요</button></div>`},
+
+'SC-10':()=>`${bar('기록 타임라인','SC-02')}
+<div class="scr">
+  <ol class="tl">${[...(S.insp.in.photos.filter(Boolean).length?[{t:Math.min(...S.insp.in.photos.filter(Boolean).map(p=>p.serverTs)),msg:`입주 촬영 ${done('in')}장 · chain ${short(S.insp.in.chain)}`}]:[]),...S.conf.log,...(S.insp.out.chain?[{t:Date.now(),msg:`퇴거 촬영 ${done('out')}장 · chain ${short(S.insp.out.chain)}`}]:[])].sort((a,b)=>a.t-b.t).map(e=>`<li><time>${fmt(e.t)}</time>${esc(e.msg)}</li>`).join('')||'<li>아직 기록이 없습니다.</li>'}</ol>
+  <button class="row" onclick="midReport()"><span class="grow">거주 중 하자 신고 추가 <span class="pill">Should</span></span>›</button>
+</div>`,
+
+'SC-11':()=>{S.kind='out';const n=done('out'),z=ZONES[S.zone],ref=S.insp.in.photos[S.zone],cur=S.insp.out.photos[S.zone];
+ if(!done('in'))return`${bar('퇴거 촬영','SC-02')}<div class="scr"><p>비교할 입주 기록이 없습니다.</p><p class="small muted">입주 기록을 먼저 하거나, 입주 기록 없이 쓰는 퇴거 단독 리포트를 이용하세요.</p><button class="btn ghost" style="flex:0" onclick="S.kind='only';S.zone=0;go('FR-20')">퇴거 단독 리포트로</button></div>`;
+ return`${bar(`퇴거 촬영 ${n}/6`,'SC-02')}
+<div class="scr">
+  <div class="chips">${ZONES.map((q,i)=>`<button class="chip ${i===S.zone?'on':''}" onclick="S.zone=${i};render()">${S.insp.out.photos[i]?'✓ ':''}${q.name}</button>`).join('')}</div>
+  <div class="frame">${cur?`<img src="${cur.url}" alt="">`:''}${ref?`<img class="ghostimg" src="${ref.url}" alt="">`:''}<div class="guide"></div></div>
+  <p class="small muted">${ref?'입주 때 사진을 반투명하게 겹쳐 두었습니다. 같은 구도로 맞춰 찍으세요.':'이 구역은 입주 사진이 없습니다.'}</p>
+</div>
+<div class="foot"><input type="file" accept="image/*" capture="environment" id="file" class="hide-file" onchange="onFile(event)"><button class="btn ghost" onclick="useSample()">샘플 사진</button><button class="btn" onclick="pickFile()">${cur?'다시 촬영':'촬영'}</button></div>
+<div class="foot" style="padding-top:0;border:0"><button class="btn" ${n?'':'disabled'} onclick="runCompare()">AI 전후 비교 (${n}구역)</button></div>`},
+
+'SC-12':()=>{const D=S.diff||[];return`${bar('비교 결과','SC-11')}
+<div class="scr">
+  ${talk('search',`${D.filter(d=>d.boxes.length).length}개 구역에서 변화가 보여요`,'입주 사진과 나란히 놓고 꼼꼼히 비교했어요.')}
+  ${D.map(d=>{const a=S.insp.in.photos[d.z],b=S.insp.out.photos[d.z];return`<div class="card"><b>${ZONES[d.z].name}</b>
+   <div class="frame slider" id="sl-${d.z}"><img src="${a.url}" alt="입주"><img class="after" src="${b.url}" alt="퇴거">${d.boxes.map(x=>`<div class="box diff" style="left:${x.x*100}%;top:${x.y*100}%;width:${x.w*100}%;height:${x.h*100}%"><span>변화</span></div>`).join('')}<div class="knob"></div></div>
+   <input type="range" min="0" max="100" value="50" aria-label="입주·퇴거 비교" oninput="document.getElementById('sl-${d.z}').style.setProperty('--p',this.value+'%')">
+   <div class="small muted" style="display:flex;justify-content:space-between"><span>← 입주</span><span>퇴거 →</span></div>
+   ${d.newD.length?d.newD.map((n,i)=>`<p class="small"><span class="pill ${d.cls[i][0].startsWith('통상')?'ok':'seal'}">${d.cls[i][0]}</span> ${esc(n.label)} · ${d.cls[i][1]}</p>`).join(''):d.boxes.length?'<p class="small muted">변화가 감지됐지만 하자로 분류되지 않았습니다. 구도 차이일 수 있습니다.</p>':'<p class="small"><span class="pill ok">변화 없음</span></p>'}
+  </div>`}).join('')}
+  ${LEGAL}
+</div>
+<div class="foot"><button class="btn" onclick="S.reportType='compare';go('SC-13')">비교 리포트 받기 · 9,900원</button></div>`},
+
+'SC-13':()=>{const only=S.reportType==='only';return`${bar(only?'퇴거 단독 리포트':'퇴거 비교 리포트',only?'FR-20':'SC-12')}
+<div class="scr">
+  ${S.paid?`<div class="hero" style="max-height:220px;aspect-ratio:207/289"><img src="assets/u-shield.jpg" alt="방패를 든 방증 마스코트" style="object-position:50% 40%"></div><h2 style="text-align:center">리포트가 발급됐어요</h2>
+  <div class="card"><dl class="kv"><dt>유형</dt><dd>${only?'퇴거 단독 (통상 손모 체크리스트)':'입주 대비 비교'}</dd><dt>결제</dt><dd>9,900원 · 토스페이먼츠(모의)</dd><dt>move_in</dt><dd class="hash">${only?'null':short(S.insp.in.chain)}</dd><dt>move_out</dt><dd class="hash">${short(S.insp[only?'only':'out'].chain)}</dd></dl></div>
+  <p class="small muted">실제 앱에서는 PDF를 내려받거나 카카오톡으로 공유합니다. 원본 검증 페이지(FR-18)는 v2 범위입니다.</p>`
+  :`<h2>리포트에 담기는 것</h2>
+  <div class="card small">${only?'<span>구역별 퇴거 사진과 서버 확인 시각</span><span>통상 손모 체크리스트 점검 결과</span><span>사진 해시와 chain_hash</span>':'<span>입주·퇴거 사진 나란히 비교</span><span>달라진 부분 하이라이트와 참고 분류</span><span>양쪽 chain_hash와 임대인 확인 이력</span>'}</div>
+  <div class="card"><div style="display:flex;justify-content:space-between"><b>결제 금액</b><b style="font-variant-numeric:tabular-nums">9,900원</b></div><span class="small muted">건당 결제 · 구독 아님</span></div>
+  ${LEGAL}`}
+</div>
+<div class="foot">${S.paid?`<button class="btn" onclick="go('SC-02')">홈으로</button>`:`<button class="btn" onclick="S.paid=true;log('리포트 결제 9,900원');render()">토스페이로 결제</button>`}</div>`},
+
+'FR-20':()=>{S.kind='only';const I=S.insp.only,p=I.photos[S.zone],z=ZONES[S.zone],n=done('only');
+ const items=['벽지 변색·햇빛 바램','못 자국·압정 구멍','가구 눌림 자국','찢김·낙서','깨짐·파손','곰팡이(환기 부족)'];
+ return`${bar(`퇴거 단독 · ${z.name}`,'SC-02')}
+<div class="scr">
+  <div class="chips">${ZONES.map((q,i)=>`<button class="chip ${i===S.zone?'on':''}" onclick="S.zone=${i};render()">${I.photos[i]?'✓ ':''}${q.name}</button>`).join('')}</div>
+  ${p?img(p,p.defects):`<div class="frame"><div class="guide"></div></div>`}
+  <h3>통상 손모 체크리스트</h3>
+  <p class="small muted">통상 손모는 원상복구 대상이 아니라는 판례 기준으로 점검합니다 (민법 제615조).</p>
+  ${items.map((t,i)=>{const k=S.zone+'-'+i,v=S.onlyCheck[k];return`<div class="row" style="cursor:default;flex-wrap:wrap"><span class="grow small">${t}</span><span class="chips">${['없음','있음'].map(o=>`<button class="chip ${v===o?'on':''}" onclick="S.onlyCheck['${k}']='${o}';render()">${o}</button>`).join('')}</span></div>`}).join('')}
+  ${LEGAL}
+</div>
+<div class="foot"><input type="file" accept="image/*" capture="environment" id="file" class="hide-file" onchange="onFile(event)"><button class="btn ghost" onclick="useSample()">샘플 사진</button><button class="btn ghost" onclick="pickFile()">촬영</button><button class="btn" ${n?'':'disabled'} onclick="S.reportType='only';S.paid=false;go('SC-13')">리포트</button></div>`},
+};
+
+// ---------- 동작 ----------
+function go(s){S.screen=s;render();$('.scr')?.scrollTo(0,0)}
+function render(){
+  if(S.screen==='SC-06'&&!S.insp.in.photos[S.zone])S.screen='SC-05';
+  $('#app').innerHTML=V[S.screen]();
+  $('#nav').innerHTML=NAV.map(([id,t])=>`<li><button class="${S.screen===id?'on':''}" onclick="jump('${id}')"><span class="id">${id}</span>${t}</button></li>`).join('');
+}
+function jump(id){if(id==='SC-11')S.kind='out';if(id==='FR-20'){S.kind='only'}if(id==='SC-05'||id==='SC-06')S.kind='in';go(id)}
+function saveLease(){const v=id=>$('#'+id).value.trim();
+  if(!v('f-addr')||!v('f-start')||!v('f-end')){alertInline('주소와 계약 기간을 입력해 주세요.');return}
+  if(v('f-end')<=v('f-start')){alertInline('계약 만료일은 시작일보다 뒤여야 합니다.');return}
+  Object.assign(S.lease,{address:v('f-addr'),start:v('f-start'),end:v('f-end'),deposit:v('f-dep'),landlord:v('f-ll')});S.leaseSaved=true;log('집 등록');go('SC-02')}
+function alertInline(m){const e=document.createElement('p');e.className='legal';e.textContent=m;$('.scr').prepend(e)}
+function addTag(e){const r=e.currentTarget.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
+  S.insp.in.photos[S.zone].defects.push({label:S.tagLabel,x:Math.max(0,x-.08),y:Math.max(0,y-.08),w:.16,h:.16,source:'user'});render()}
+function delTag(i){S.insp.in.photos[S.zone].defects.splice(i,1);render()}
+async function retake(){S.insp.in.photos[S.zone]=null;S.insp.in.chain=await chainOf(S.insp.in.photos);go('SC-05')}
+function nextZone(){const nx=S.insp.in.photos.findIndex(p=>!p);if(nx<0){go('SC-04');return}S.zone=nx;go('SC-05')}
+function send(ch){const c=S.conf;c.token=Math.random().toString(36).slice(2,10);c.status='sent';log(`${ch}로 확인 요청 발송${c.comments&&Object.keys(c.comments).length?' (수정 후 재발송)':''}`);c.comments={};render()}
+function noReply(){S.conf.status='signed';S.conf.signer='(미응답)';log('7일 미응답 · 발송·열람 이력과 함께 기록 잠금');render()}
+function landlord(act){const c=S.conf;c.signer=$('#signer').value.trim()||'임대인';c.comments={};
+  ZONES.forEach((_,i)=>{const t=$('#obj-'+i)?.value.trim();if(t)c.comments[i]=t});
+  if(act==='object'){if(!Object.keys(c.comments).length){alertInline('이의를 남길 항목의 칸에 내용을 적어 주세요.');return}c.status='objected';log(`임대인 이의 ${Object.keys(c.comments).length}건`)}
+  else{c.status='signed';log(`${c.signer} 확인 서명 · 기록 잠금`)}
+  go('SC-08')}
+function midReport(){log('거주 중 하자 신고: 보일러 온수 불량, 수리 요청');render()}
+$('#logo-aside').innerHTML=LOGO+'방증';
+render();
+</script>
