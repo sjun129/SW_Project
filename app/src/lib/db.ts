@@ -103,21 +103,10 @@ export async function uploadPhoto(p: { id: string; inspectionId: string; zoneId:
 }
 
 export async function replaceDefects(photoId: string, defects: { label: string; x: number; y: number; w: number; h: number; source: 'ai' | 'user'; conf?: number }[]) {
-  const rows = defects.map((d) => ({ photo_id: photoId, label: d.label, bbox: { x: d.x, y: d.y, w: d.w, h: d.h }, source: d.source, confidence: d.conf ?? null }));
-  // Insert replacements first so an insert error never erases the photo's saved tags.
-  const inserted = rows.length
-    ? ok(await supabase.from('defects').insert(rows).select('id')) as { id: string }[]
-    : [];
-  if (!inserted.length) {
-    ok(await supabase.from('defects').delete().eq('photo_id', photoId));
-    return;
-  }
-  const insertedIds = inserted.map(({ id }) => id);
-  const removed = await supabase.from('defects').delete().eq('photo_id', photoId).not('id', 'in', `(${insertedIds.join(',')})`);
-  if (removed.error) {
-    await supabase.from('defects').delete().eq('photo_id', photoId).in('id', insertedIds);
-    throw new Error(removed.error.message);
-  }
+  ok(await supabase.rpc('replace_photo_defects', {
+    p_photo: photoId,
+    p_defects: defects.map(({ label, x, y, w, h, source, conf }) => ({ label, x, y, w, h, source, conf: conf ?? null })),
+  }));
 }
 
 /** Storage path is deterministic, so it can be rebuilt from ids without another query. */
