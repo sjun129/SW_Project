@@ -30,14 +30,14 @@ export default function LeaseRegister() {
   // Contract photo -> form values via the vision function. Only fills fields the model could read; the user still reviews and saves.
   const fromPhoto = async (camera: boolean) => {
     if (mode !== 'remote') return setOcr('계약서 읽기는 로그인한 뒤에 쓸 수 있어요.');
-    const perm = camera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return setOcr('사진 권한이 필요해요.');
-    const opts = { mediaTypes: ['images'] as ImagePicker.MediaType[], base64: true, quality: 0.6 };
-    const r = camera ? await ImagePicker.launchCameraAsync(opts) : await ImagePicker.launchImageLibraryAsync(opts);
-    const a = r.canceled ? undefined : r.assets[0];
-    if (!a?.base64) return;
-    setOcr('계약서를 읽는 중…'); setErr('');
     try {
+      const perm = camera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) return setOcr('사진 권한이 필요해요. 기기 설정에서 권한을 허용한 뒤 다시 시도해 주세요.');
+      const opts = { mediaTypes: ['images'] as ImagePicker.MediaType[], base64: true, quality: 0.6 };
+      const r = camera ? await ImagePicker.launchCameraAsync(opts) : await ImagePicker.launchImageLibraryAsync(opts);
+      const a = r.canceled ? undefined : r.assets[0];
+      if (!a?.base64) return;
+      setOcr('계약서를 읽는 중…'); setErr('');
       const g = await extractLease(`data:${a.mimeType ?? 'image/jpeg'};base64,${a.base64}`);
       setF((x) => ({
         address: g.address || x.address,
@@ -47,7 +47,7 @@ export default function LeaseRegister() {
         landlord: g.landlord_phone || x.landlord,
       }));
       setOcr('읽은 값을 채웠어요. 틀린 곳이 없는지 확인한 뒤 저장해 주세요.');
-    } catch (e) { setOcr(`계약서를 읽지 못했어요: ${errText(e)}`); }
+    } catch (e) { setOcr(`사진을 불러오거나 계약서를 읽지 못했어요: ${errText(e)}`); }
   };
   const save = async () => {
     if (!f.address.trim()) return setErr('주소를 입력해 주세요.');
