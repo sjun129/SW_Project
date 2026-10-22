@@ -54,6 +54,7 @@ npx expo start
    | `20261024000000_replace_photo_defects.sql` | 사진 하자 태그를 RLS 아래에서 원자적으로 교체하는 RPC |
    | `20261025000000_create_lease_rpc.sql` | 집·기본 구역·점검 단계를 생성하고 현재 집을 전환하는 원자적 RPC |
    | `20261026000000_defect_report_photos.sql` | 하자 신고에 같은 집의 거주 기록 사진을 최대 5장 연결 |
+   | `20261027000000_validate_photo_zone_lease.sql` | 사진의 점검 단계와 구역이 같은 집에 속하는지 서버에서 검증 |
 
 2. `.env.example`을 `.env.local`로 복사하고 프로젝트 URL과 **publishable(anon) 키**를 넣습니다. service_role 키는 절대 넣지 않습니다.
 3. 개발 서버를 다시 시작합니다(`npx expo start --clear`).
