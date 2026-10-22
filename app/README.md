@@ -41,6 +41,8 @@ npx expo start
 
 서버 설정(`.env.local`)이 없으면 로그인 버튼이 꺼지고 데모 모드만 쓸 수 있습니다.
 
+결제 화면은 시연용 모의 결제입니다. 서버 모드에서 결제 버튼을 눌러도 DB에는 `pending` 리포트만 저장하며, 실제 `paid` 상태와 결제 내역을 기록하는 PG 연동·서버 웹훅은 아직 연결되지 않았습니다.
+
 ## Supabase 설정
 
 1. Supabase 대시보드의 **SQL Editor**에서 `../supabase/migrations/`의 SQL 파일을 이름 순서대로 한 번씩 실행합니다. 모두 다시 실행해도 문제없게 작성되어 있습니다.
@@ -55,6 +57,7 @@ npx expo start
    | `20261025000000_create_lease_rpc.sql` | 집·기본 구역·점검 단계를 생성하고 현재 집을 전환하는 원자적 RPC |
    | `20261026000000_defect_report_photos.sql` | 하자 신고에 같은 집의 거주 기록 사진을 최대 5장 연결 |
    | `20261027000000_validate_photo_zone_lease.sql` | 사진의 점검 단계와 구역이 같은 집에 속하는지 서버에서 검증 |
+| `20261028000000_reports_payment_guard.sql` | 클라이언트는 `pending` 리포트만 만들 수 있고 결제 완료 상태를 조작할 수 없도록 제한 |
 
 2. `.env.example`을 `.env.local`로 복사하고 프로젝트 URL과 **publishable(anon) 키**를 넣습니다. service_role 키는 절대 넣지 않습니다.
 3. 개발 서버를 다시 시작합니다(`npx expo start --clear`).

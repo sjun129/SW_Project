@@ -323,7 +323,7 @@ function useStoreValue() {
   }, [remote, refresh]);
 
   const pay = useCallback(async (key: 'compare' | 'only') => {
-    if (remote) await db.createPaidReport(lease.id, key === 'compare' ? 'compare' : 'move_out_only', key === 'compare' ? inspectionIds.in : undefined, inspectionIds.out, key === 'only' ? { checklist } : undefined);
+    if (remote) await db.createPendingReport(lease.id, key === 'compare' ? 'compare' : 'move_out_only', key === 'compare' ? inspectionIds.in : undefined, inspectionIds.out, key === 'only' ? { checklist } : undefined);
     setPaid((p) => ({ ...p, [key]: true }));
     log('리포트 결제', '9,900원');
   }, [remote, lease.id, inspectionIds, checklist, log]);

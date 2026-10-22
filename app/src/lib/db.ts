@@ -148,9 +148,9 @@ export async function createDefectReport(leaseId: string, r: { category: string;
   ok(await supabase.from('defect_reports').insert({ lease_id: leaseId, category: r.category, place: r.place, memo: r.memo || null, repair_requested: r.repair, photo_ids: r.photoIds }));
 }
 
-// ponytail: report is marked paid by the client; move this to the payment webhook (service role) when a real PG is wired
-export async function createPaidReport(leaseId: string, type: 'compare' | 'move_out_only', moveInId?: string, moveOutId?: string, diff?: unknown) {
-  ok(await supabase.from('reports').insert({ lease_id: leaseId, type, status: 'paid', move_in_id: moveInId ?? null, move_out_id: moveOutId ?? null, diff: diff ?? null }));
+/** Mock checkout only creates a pending report. A trusted PG webhook must record payment and issue it. */
+export async function createPendingReport(leaseId: string, type: 'compare' | 'move_out_only', moveInId?: string, moveOutId?: string, diff?: unknown) {
+  ok(await supabase.from('reports').insert({ lease_id: leaseId, type, status: 'pending', move_in_id: moveInId ?? null, move_out_id: moveOutId ?? null, diff: diff ?? null }));
 }
 
 // ---------------------------------------------------------------- AI (Edge Function `vision`, OpenAI)
