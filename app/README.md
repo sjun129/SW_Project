@@ -56,6 +56,7 @@ npx expo start
 2. `.env.example`을 `.env.local`로 복사하고 프로젝트 URL과 **publishable(anon) 키**를 넣습니다. service_role 키는 절대 넣지 않습니다.
 3. 개발 서버를 다시 시작합니다(`npx expo start --clear`).
 4. 앱에서 이메일로 가입합니다. 프로젝트에서 이메일 인증을 켜 두었다면 메일의 링크를 누른 뒤 로그인합니다.
+5. 비밀번호 재설정 메일의 링크가 앱으로 돌아오도록 대시보드 **Authentication → URL Configuration → Redirect URLs**에 `jachwisillok://reset-password`와 배포한 웹 주소의 `/reset-password` 경로를 추가합니다. Expo Go에서 테스트할 때는 `exp://.../--/reset-password` 형식의 개발 리다이렉트 주소도 허용 목록에 추가해야 합니다.
 
 ## AI 기능 설정
 
