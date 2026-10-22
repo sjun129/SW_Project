@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { short } from '@/hash';
-import { fmtTime, uid, useStore } from '@/store';
+import { errText, fmtTime, uid, useStore } from '@/store';
 import { C } from '@/theme';
 import { Btn, Chip, Footer, Header, Icon, Legal, Row, Screen, T, TaggedPhoto } from '@/ui';
 
@@ -18,12 +18,21 @@ export default function Tagging() {
   const { photos, zones, updateDefects, photosOf } = useStore();
   const photo = photos.find((p) => p.id === id);
   const [label, setLabel] = useState(LABELS[0]);
+  const [err, setErr] = useState('');
+  const [saving, setSaving] = useState(false);
   if (!photo) return <Screen header={<Header title="사진 없음" />}><T color={C.muted}>사진을 찾을 수 없어요.</T></Screen>;
   const zone = zones.find((z) => z.id === photo.zoneId);
   const nextZone = zones.find((z) => !photosOf(photo.stage, z.id).length);
 
-  const addAt = (x: number, y: number) => void updateDefects(photo.id, [...photo.defects, { id: uid(), label, x: Math.max(0, x - 0.08), y: Math.max(0, y - 0.08), w: 0.16, h: 0.16, source: 'user' }]);
-  const remove = (did: string) => void updateDefects(photo.id, photo.defects.filter((d) => d.id !== did));
+  const saveDefects = async (next: typeof photo.defects) => {
+    if (saving) return;
+    setSaving(true); setErr('');
+    try { await updateDefects(photo.id, next); }
+    catch (e) { setErr(`하자 기록을 저장하지 못했어요: ${errText(e)}`); }
+    finally { setSaving(false); }
+  };
+  const addAt = (x: number, y: number) => void saveDefects([...photo.defects, { id: uid(), label, x: Math.min(0.84, Math.max(0, x - 0.08)), y: Math.min(0.84, Math.max(0, y - 0.08)), w: 0.16, h: 0.16, source: 'user' }]);
+  const remove = (did: string) => void saveDefects(photo.defects.filter((d) => d.id !== did));
 
   return (
     <Screen gap={12}
@@ -36,6 +45,7 @@ export default function Tagging() {
       </Footer>}>
       <TaggedPhoto src={photo.src} defects={photo.defects} height={268} onPressAt={addAt} />
       <T size={12.5} color={photo.ai === 'none' ? C.red : C.muted}>{AI_NOTE[photo.ai ?? 'model']}</T>
+      {!!err && <T size={12.5} color={C.red}>{err}</T>}
       <Row gap={6} style={{ flexWrap: 'wrap' }}>{LABELS.map((l) => <Chip key={l} label={l} on={l === label} onPress={() => setLabel(l)} />)}</Row>
       <View style={{ backgroundColor: C.surface, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 4 }}>
         {photo.defects.length === 0 && <T size={13} color={C.muted} style={{ paddingVertical: 12 }}>표시된 하자가 없어요.</T>}

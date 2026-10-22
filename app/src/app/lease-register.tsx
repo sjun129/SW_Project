@@ -9,6 +9,12 @@ import { C } from '@/theme';
 import { Btn, Footer, Header, Icon, Row, s, Screen, T } from '@/ui';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+const validDate = (value: string) => {
+  if (!DATE.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+};
 
 export default function LeaseRegister() {
   const { from, edit } = useLocalSearchParams<{ from?: string; edit?: string }>();
@@ -35,8 +41,8 @@ export default function LeaseRegister() {
       const g = await extractLease(`data:${a.mimeType ?? 'image/jpeg'};base64,${a.base64}`);
       setF((x) => ({
         address: g.address || x.address,
-        start: DATE.test(g.start_date) ? g.start_date : x.start,
-        end: DATE.test(g.end_date) ? g.end_date : x.end,
+        start: validDate(g.start_date) ? g.start_date : x.start,
+        end: validDate(g.end_date) ? g.end_date : x.end,
         deposit: g.deposit > 0 ? g.deposit.toLocaleString('ko-KR') : x.deposit,
         landlord: g.landlord_phone || x.landlord,
       }));
@@ -45,7 +51,7 @@ export default function LeaseRegister() {
   };
   const save = async () => {
     if (!f.address.trim()) return setErr('주소를 입력해 주세요.');
-    if (!DATE.test(f.start) || !DATE.test(f.end)) return setErr('계약 기간은 2026-03-01 형식으로 입력해 주세요.');
+    if (!validDate(f.start) || !validDate(f.end)) return setErr('실제로 존재하는 날짜를 YYYY-MM-DD 형식으로 입력해 주세요.');
     if (f.end <= f.start) return setErr('계약 만료일은 시작일보다 뒤여야 해요.');
     setBusy(true); setErr('');
     try {

@@ -68,20 +68,20 @@ export function mockDetect(zoneName: string, stage: Stage): Defect[] {
 const DEMO_ZONES: Zone[] = db.DEFAULT_ZONES.map(([name, tip], i) => ({ id: ['entry', 'wall', 'floor', 'bath', 'window', 'appliance'][i], name, tip }));
 const t0 = new Date('2026-10-14T15:02:00+09:00').getTime();
 const SEED: [string, string, ImageSourcePropType, string][] = [
-  ['entry', '현관', SAMPLE.floor, '4be1a09c71f2d83e5a0c1b9f6e2d47a8c3b5f1e09d2a6c7b8e4f3a2d1c0b9a73b'],
-  ['wall', '벽지', SAMPLE.wall, '9f2c41ab07de6b3c8a5e1f2d0c9b7a64e3d2c1b0a9f8e7d6c5b4a3928170c81e'],
-  ['floor', '바닥', SAMPLE.floor, '0d7e55c3e9126a4b8c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e25f9b0'],
-  ['bath', '욕실 실리콘', SAMPLE.wall, 'e1aa9f30c4b7d2e6a8f1c3b5d7e9f0a2c4b6d8e0f1a3c5b7d9e2f4a6c8b00c2d'],
+  ['entry', '현관', SAMPLE.floor, '54a88851a8b3b244dedf4387a8733ba74c9d0edd175e486dfa3c2ac290844c8f'],
+  ['wall', '벽지', SAMPLE.wall, 'f75158f215852ad05d0b7e4fa729f8adba59c72514b4d985889e1f5509bf58e2'],
+  ['floor', '바닥', SAMPLE.floor, '54a88851a8b3b244dedf4387a8733ba74c9d0edd175e486dfa3c2ac290844c8f'],
+  ['bath', '욕실 실리콘', SAMPLE.wall, 'f75158f215852ad05d0b7e4fa729f8adba59c72514b4d985889e1f5509bf58e2'],
 ];
 const demoPhotos = (): Photo[] => SEED.map(([zoneId, name, src, hash], i) => ({
   id: uid(), zoneId, stage: 'in', src, sample: true, hash,
-  deviceTs: t0 + 400000 + i * 60000, serverTs: t0 + 400300 + i * 60000, defects: mockDetect(name, 'in'),
+  deviceTs: t0 + 400000 + i * 60000, serverTs: t0 + 400300 + i * 60000, defects: mockDetect(name, 'in'), ai: 'mock',
 }));
 const DEMO_LEASES: Lease[] = [
   { id: 'l1', address: '부산 금정구 장전동 ○○빌 302호', start: '2026-03-01', end: '2027-02-28', deposit: '5,000,000', landlord: '010-1234-5678', current: true },
   { id: 'l0', address: '부산 금정구 부곡동 △△원룸 201호', start: '2025-03-01', end: '2026-02-28', deposit: '3,000,000', landlord: '010-9876-5432', current: false },
 ];
-const DEMO_CHAINS: Record<Stage, string> = { in: 'cc93ba62c04f656ede5f19378eb457bd524e0d16930d8373576b5c5785dc7d76', live: ZERO_HASH, out: ZERO_HASH };
+const DEMO_CHAINS: Record<Stage, string> = { in: '312743ca13342353eacf3aa126cad99f25e0f5e3580d207457468fed6d91db63', live: ZERO_HASH, out: ZERO_HASH };
 const EMPTY_LEASE: Lease = { id: '', address: '등록된 집이 없어요', start: '2026-01-01', end: '2026-01-02', deposit: '0', landlord: '', current: true };
 
 function daysUntil(date: string) {
@@ -235,8 +235,8 @@ function useStoreValue() {
   }, [zones, remote, inspectionIds, chains, log]);
 
   const updateDefects = useCallback(async (photoId: string, defects: Defect[]) => {
-    setPhotos((l) => l.map((p) => (p.id === photoId ? { ...p, defects } : p)));
     if (remote) await db.replaceDefects(photoId, defects);
+    setPhotos((l) => l.map((p) => (p.id === photoId ? { ...p, defects } : p)));
   }, [remote]);
 
   const addZone = useCallback(async (name: string): Promise<Zone> => {
