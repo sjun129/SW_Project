@@ -24,9 +24,10 @@ export default function DefectReport() {
       <Row gap={8}>
         {livePhotos.slice(-2).map((p) => <Image key={p.id} source={p.src} style={{ width: 100, height: 100, borderRadius: 14 }} />)}
         <Pressable onPress={() => router.push({ pathname: '/camera', params: { stage: 'live' } })} style={{ width: 100, height: 100, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: C.line, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-          <Icon name="camera" size={22} color={C.muted} /><T size={11} w="m" color={C.muted}>{livePhotos.length}/5</T>
+          <Icon name="camera" size={22} color={C.muted} /><T size={11} w="m" color={C.muted}>거주 기록 촬영</T>
         </Pressable>
       </Row>
+      <T size={12} color={C.muted}>사진은 거주 중 기록에 저장되고, 아래 하자 신고와는 별도로 관리돼요.</T>
       <T size={14} w="b">어떤 문제인가요?</T>
       <Row gap={6} style={{ flexWrap: 'wrap' }}>{CATS.map((c) => <Chip key={c} label={c} on={c === cat} onPress={() => setCat(c)} />)}</Row>
       <T size={14} w="b">어디인가요?</T>
@@ -35,7 +36,7 @@ export default function DefectReport() {
       <TextInput nativeID="defect-memo" multiline value={memo} onChangeText={setMemo} placeholder="예: 보일러 온수가 미지근하게 나와요. 10월 20일부터." placeholderTextColor={C.muted}
         style={{ backgroundColor: C.field, borderRadius: 12, padding: 16, minHeight: 96, textAlignVertical: 'top', fontFamily: FONT.r, fontSize: 14, lineHeight: 21, color: C.ink, includeFontPadding: false }} />
       <Row gap={12} style={{ backgroundColor: C.surface, borderRadius: 14, padding: 14 }}>
-        <View style={{ flex: 1 }}><T size={14} w="b">임대인에게 수리 요청 보내기</T><T size={12} color={C.muted}>요청 기록도 증빙으로 함께 남아요</T></View>
+        <View style={{ flex: 1 }}><T size={14} w="b">수리 요청 의사 표시</T><T size={12} color={C.muted}>신고에 수리 요청 의사를 기록해요</T></View>
         <Switch value={repair} onValueChange={setRepair} trackColor={{ true: C.accent, false: C.line }} thumbColor="#fff" />
       </Row>
       {!!err && <T size={12.5} color={C.red}>{err}</T>}

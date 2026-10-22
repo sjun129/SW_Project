@@ -304,7 +304,7 @@ function useStoreValue() {
     if (remote) await db.createDefectReport(lease.id, r);
     setDefectReports((l) => [{ ...r, id: uid(), time: Date.now() }, ...l]);
     log(`${r.place} 하자 신고`, r.category);
-    notify({ icon: 'alert-triangle', tone: 'muted', title: `${r.place} 하자 신고가 저장됐어요`, body: r.repair ? '수리 요청을 함께 보냈어요' : '거주 중 기록으로 남겼어요' });
+    notify({ icon: 'alert-triangle', tone: 'muted', title: `${r.place} 하자 신고가 저장됐어요`, body: r.repair ? '수리 요청 의사도 기록했어요' : '거주 중 기록으로 남겼어요' });
   }, [remote, lease.id, log, notify]);
 
   const addLease = useCallback(async (l: Omit<Lease, 'id' | 'current'>) => {
