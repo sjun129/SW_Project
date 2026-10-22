@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, TextInput, View } from 'react-native';
 import { hashBytes, readBytes, short } from '@/hash';
 import type { VerifyResult } from '@/lib/db';
 import { errText, fmtTime, STAGE_LABEL, useStore } from '@/store';
@@ -27,8 +27,10 @@ export default function Verify() {
   const choosePhoto = async () => {
     setErr(''); setRes(null);
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) throw new Error('사진 접근 권한을 허용해 주세요.');
+      if (Platform.OS !== 'web') {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) throw new Error('사진 접근 권한을 허용해 주세요.');
+      }
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 1 });
       const asset = result.canceled ? undefined : result.assets[0];
       if (!asset?.uri) return;
