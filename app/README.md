@@ -33,6 +33,7 @@ npx expo start
 |---|---|---|
 | 들어가는 방법 | 로그인 화면의 "로그인 없이 둘러보기" | 이메일로 가입하거나 로그인 |
 | 데이터 저장 | 메모리 (앱을 다시 켜면 초기화) | Supabase (DB와 Storage) |
+| 거주 중 하자 신고 | 신고 입력과 최대 5장 사진 첨부 (메모리) | 신고와 첨부 사진 ID를 함께 저장 |
 | AI 하자 태깅 | 구역별로 정해 둔 예시 결과 | OpenAI 모델 분석 |
 | 임대인 응답 | 리포트 탭의 "임대인 화면으로 보기 (시연)" | 실제 웹 링크 `/c/<token>` |
 | 실시간 알림 | 없음 | 임대인이 응답하면 앱 위쪽에 배너 |
@@ -50,8 +51,9 @@ npx expo start
    | `20261021000000_landlord_verify_events.sql` | 임대인용 사진 링크, 원본 검증 RPC(`verify_hash`), 알림·활동 `events` 테이블, 임대인 응답을 알림으로 남기는 트리거 |
    | `20261022000000_landlord_guard.sql` | 세입자가 자기 링크를 열면 열람으로 기록하지 않고, 세입자가 스스로 서명하는 것을 막음 |
    | `20261023000000_realtime_events.sql` | `events` 테이블을 Realtime에 등록 (실시간 알림 배너) |
-| `20261024000000_replace_photo_defects.sql` | 사진 하자 태그를 RLS 아래에서 원자적으로 교체하는 RPC |
-| `20261025000000_create_lease_rpc.sql` | 집·기본 구역·점검 단계를 생성하고 현재 집을 전환하는 원자적 RPC |
+   | `20261024000000_replace_photo_defects.sql` | 사진 하자 태그를 RLS 아래에서 원자적으로 교체하는 RPC |
+   | `20261025000000_create_lease_rpc.sql` | 집·기본 구역·점검 단계를 생성하고 현재 집을 전환하는 원자적 RPC |
+   | `20261026000000_defect_report_photos.sql` | 하자 신고에 같은 집의 거주 기록 사진을 최대 5장 연결 |
 
 2. `.env.example`을 `.env.local`로 복사하고 프로젝트 URL과 **publishable(anon) 키**를 넣습니다. service_role 키는 절대 넣지 않습니다.
 3. 개발 서버를 다시 시작합니다(`npx expo start --clear`).
@@ -197,7 +199,7 @@ app/
 npx tsc --noEmit
 npx expo lint
 npx expo export --platform web
-npx -y deno@2 check ../supabase/functions/vision/index.ts
+npx -y deno@2 check --config ../supabase/functions/vision/deno.json ../supabase/functions/vision/index.ts
 ```
 
 ## 문제 해결

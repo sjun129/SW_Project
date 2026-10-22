@@ -21,7 +21,7 @@ export type Confirm = { status: ConfirmStatus; channel?: string; signer?: string
 export type Lease = { id: string; address: string; start: string; end: string; deposit: string; landlord: string; current: boolean };
 export type Noti = { id: string; icon: 'eye' | 'file-text' | 'alert-triangle' | 'calendar' | 'check-circle'; tone: 'accent' | 'ok' | 'muted' | 'red'; title: string; body: string; time: number; unread: boolean };
 export type Activity = { id: string; title: string; detail?: string; time: number };
-export type DefectReport = { id: string; category: string; place: string; memo: string; repair: boolean; time: number };
+export type DefectReport = { id: string; category: string; place: string; memo: string; repair: boolean; photoIds: string[]; time: number };
 /** demo = in-memory sample data; remote = signed-in user, every write goes to Supabase first. */
 export type Mode = 'demo' | 'remote';
 
@@ -166,7 +166,7 @@ function useStoreValue() {
     })));
     const c = s.confirmation;
     setConfirm(c ? { status: c.status, channel: c.channel ?? undefined, signer: c.signer_name ?? undefined, comment: c.comment ?? undefined, token: c.token } : { status: 'none' });
-    setDefectReports(s.defectReports.map((r) => ({ id: r.id, category: r.category, place: r.place, memo: r.memo ?? '', repair: r.repair_requested, time: new Date(r.created_at).getTime() })));
+    setDefectReports(s.defectReports.map((r) => ({ id: r.id, category: r.category, place: r.place, memo: r.memo ?? '', repair: r.repair_requested, photoIds: r.photo_ids ?? [], time: new Date(r.created_at).getTime() })));
     setPaid(Object.fromEntries(s.reports.filter((r) => r.status !== 'pending').map((r) => [r.type === 'compare' ? 'compare' : 'only', true])));
     if (checklistLeaseId.current !== cur.id) {
       const latestOnlyReport = s.reports.find((r) => r.type === 'move_out_only' && r.status !== 'pending');

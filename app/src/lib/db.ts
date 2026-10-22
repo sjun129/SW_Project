@@ -10,7 +10,7 @@ export type InspectionRow = { id: string; type: DbStage; chain_hash: string };
 export type DefectRow = { id: string; photo_id: string; label: string; bbox: { x: number; y: number; w: number; h: number }; source: 'ai' | 'user'; confidence: number | null };
 export type PhotoRow = { id: string; inspection_id: string; zone_id: string; storage_key: string; sha256: string; prev_hash: string; device_ts: string | null; server_ts: string; defects: DefectRow[] };
 export type ConfirmationRow = { id: string; token: string; channel: string | null; status: 'sent' | 'viewed' | 'signed' | 'objected'; signer_name: string | null; comment: string | null; sent_at: string };
-export type DefectReportRow = { id: string; category: string; place: string; memo: string | null; repair_requested: boolean; created_at: string };
+export type DefectReportRow = { id: string; category: string; place: string; memo: string | null; repair_requested: boolean; photo_ids: string[]; created_at: string };
 export type ReportRow = { id: string; type: 'compare' | 'move_out_only'; status: 'pending' | 'paid' | 'issued'; diff: unknown; created_at: string };
 export type EventRow = { id: string; kind: 'activity' | 'notice'; icon: string | null; tone: string | null; title: string; body: string | null; read_at: string | null; created_at: string };
 
@@ -47,7 +47,7 @@ export async function loadSnapshot(): Promise<Snapshot | null> {
   const [z, ins, dr, rp, ev] = await Promise.all([
     supabase.from('zones').select('id,name,tip,sort').eq('lease_id', lease.id).order('sort'),
     supabase.from('inspections').select('id,type,chain_hash').eq('lease_id', lease.id),
-    supabase.from('defect_reports').select('id,category,place,memo,repair_requested,created_at').eq('lease_id', lease.id).order('created_at', { ascending: false }),
+    supabase.from('defect_reports').select('id,category,place,memo,repair_requested,photo_ids,created_at').eq('lease_id', lease.id).order('created_at', { ascending: false }),
     supabase.from('reports').select('id,type,status,diff,created_at').eq('lease_id', lease.id).order('created_at', { ascending: false }),
     supabase.from('events').select('id,kind,icon,tone,title,body,read_at,created_at').eq('lease_id', lease.id).order('created_at', { ascending: false }).limit(100),
   ]);
@@ -144,8 +144,8 @@ export const landlordView = async (token: string) => ok(await supabase.rpc('land
 export const landlordRespond = async (token: string, okv: boolean, signer: string, comment?: string) =>
   ok(await supabase.rpc('landlord_respond', { p_token: token, p_ok: okv, p_signer: signer, p_comment: comment ?? null }));
 
-export async function createDefectReport(leaseId: string, r: { category: string; place: string; memo: string; repair: boolean }) {
-  ok(await supabase.from('defect_reports').insert({ lease_id: leaseId, category: r.category, place: r.place, memo: r.memo || null, repair_requested: r.repair }));
+export async function createDefectReport(leaseId: string, r: { category: string; place: string; memo: string; repair: boolean; photoIds: string[] }) {
+  ok(await supabase.from('defect_reports').insert({ lease_id: leaseId, category: r.category, place: r.place, memo: r.memo || null, repair_requested: r.repair, photo_ids: r.photoIds }));
 }
 
 // ponytail: report is marked paid by the client; move this to the payment webhook (service role) when a real PG is wired
