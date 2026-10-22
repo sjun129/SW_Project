@@ -1,0 +1,5 @@
+# Local Supabase CLI project identifier. Remote deployments target the explicit --project-ref.
+project_id = "sw-project"
+
+[functions.vision]
+verify_jwt = true

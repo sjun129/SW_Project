@@ -68,7 +68,7 @@ npx expo start
 
 AI 하자 태깅과 계약서 읽기는 Edge Function `vision`이 OpenAI를 호출해서 처리합니다. 앱에는 OpenAI 키를 넣지 않습니다.
 
-1. 함수를 배포합니다. 처음이면 `npx supabase login`을 먼저 실행합니다.
+1. 저장소 루트의 `supabase/config.toml`은 `vision`의 JWT 검증을 켜 둡니다. 처음이면 `npx supabase login`을 실행하고, 팀의 Supabase 프로젝트 ref를 지정해 함수를 배포합니다.
 
    ```bash
    npx supabase functions deploy vision --project-ref <project-ref>

@@ -1,5 +1,5 @@
 // 자취실록 vision function (FR-06 AI 하자 태깅, 계약서 자동 채우기)
-// Deploy:  npx supabase functions deploy vision --project-ref gtbgbwnctzwlzitcmxqo
+// Deploy:  npx supabase functions deploy vision --project-ref <project-ref>
 // Secret:  OPENAI_API_KEY (Dashboard → Edge Functions → Secrets). Optional OPENAI_MODEL.
 import { withSupabase } from "npm:@supabase/server@1";
 
