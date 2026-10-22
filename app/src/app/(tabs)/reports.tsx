@@ -5,7 +5,7 @@ import { C } from '@/theme';
 import { Card, Header, Icon, IconBox, Pill, Screen, T, type IconName } from '@/ui';
 
 export default function Reports() {
-  const { confirm, inDone, zones, photos, paid } = useStore();
+  const { confirm, inDone, zones, photos, paid, mode } = useStore();
   const defects = photos.filter((p) => p.stage === 'in').reduce((n, p) => n + p.defects.length, 0);
   const hasOut = photos.some((p) => p.stage === 'out');
   const docs: { t: string; d: string; icon: IconName; pill: string; tone: 'accent' | 'neutral' | 'ok' | 'soft'; bg: string; fg: string; to?: Href }[] = [
@@ -33,10 +33,12 @@ export default function Reports() {
         <View style={{ flex: 1 }}><T size={15} w="b">원본 검증</T><T size={12.5} color={C.muted}>SHA-256으로 등록된 원본인지 확인해요</T></View>
         <Icon name="chevron-right" size={18} color={C.muted} />
       </Card>
-      <Card onPress={() => router.push(confirm.token ? `/c/${confirm.token}` : '/landlord')} style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.line, borderStyle: 'dashed' }}>
-        <View style={{ flex: 1 }}><T size={14} w="b">임대인 화면으로 보기 (시연)</T><T size={12} color={C.muted}>임대인이 받는 확인 링크 화면을 미리 봐요</T></View>
-        <Icon name="chevron-right" size={18} color={C.muted} />
-      </Card>
+      {(mode === 'demo' || confirm.token) && (
+        <Card onPress={() => router.push(mode === 'demo' ? '/landlord' : `/c/${confirm.token}`)} style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.line, borderStyle: 'dashed' }}>
+          <View style={{ flex: 1 }}><T size={14} w="b">임대인 화면으로 보기{mode === 'demo' ? ' (시연)' : ''}</T><T size={12} color={C.muted}>{mode === 'demo' ? '임대인 확인 흐름을 시연해요' : '임대인에게 보낸 확인 링크를 미리 봐요'}</T></View>
+          <Icon name="chevron-right" size={18} color={C.muted} />
+        </Card>
+      )}
     </Screen>
   );
 }

@@ -4,21 +4,28 @@ import { Image, Pressable, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CONFIRM_LABEL, errText, useStore } from '@/store';
 import { C } from '@/theme';
-import { Btn, Card, Footer, Icon, LOGO_COMPACT, Mascot, Pill, Row, s, Screen, T, TaggedPhoto } from '@/ui';
+import { Btn, Card, Footer, Header, Icon, LOGO_COMPACT, Mascot, Pill, Row, s, Screen, T, TaggedPhoto } from '@/ui';
 
 /** Simulates the landlord's web page (SC-09): no app install, view + sign or object per item. */
 export default function Landlord() {
-  const { photosOf, zones, lease, confirm, landlordView, landlordRespond } = useStore();
+  const { photosOf, zones, lease, confirm, landlordView, landlordRespond, mode } = useStore();
   const [signer, setSigner] = useState('김집주');
   const [objectFor, setObjectFor] = useState<string | null>(null);
   const [comment, setComment] = useState('');
   const [err, setErr] = useState('');
-  useEffect(() => { landlordView().catch((e) => setErr(errText(e))); }, [landlordView]);
+  useEffect(() => { if (mode === 'demo') landlordView().catch((e) => setErr(errText(e))); }, [landlordView, mode]);
   const respond = (okv: boolean, who: string, text?: string) => landlordRespond(okv, who, text).catch((e) => setErr(errText(e)));
   const ps = photosOf('in');
   const defects = ps.reduce((n, p) => n + p.defects.length, 0);
   const unit = lease.address.split(' ').at(-1);
   const done = confirm.status === 'signed' || confirm.status === 'objected';
+
+  if (mode !== 'demo') return (
+    <Screen header={<Header title="임대인 확인" />}>
+      <T size={14} color={C.muted}>임대인 시연 화면은 데모 모드에서만 사용할 수 있어요. 실제 요청은 리포트에 표시된 확인 링크를 열어 주세요.</T>
+      <Btn label="리포트로 돌아가기" onPress={() => router.replace('/reports')} />
+    </Screen>
+  );
 
   const bar = (
     <SafeAreaView edges={['top']} style={{ backgroundColor: C.surface }}>
