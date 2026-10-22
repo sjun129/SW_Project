@@ -33,12 +33,15 @@ npx expo start
 |---|---|---|
 | 들어가는 방법 | 로그인 화면의 "로그인 없이 둘러보기" | 이메일로 가입하거나 로그인 |
 | 데이터 저장 | 메모리 (앱을 다시 켜면 초기화) | Supabase (DB와 Storage) |
+| 거주 중 하자 신고 | 신고 입력과 최대 5장 사진 첨부 (메모리) | 신고와 첨부 사진 ID를 함께 저장 |
 | AI 하자 태깅 | 구역별로 정해 둔 예시 결과 | OpenAI 모델 분석 |
 | 임대인 응답 | 리포트 탭의 "임대인 화면으로 보기 (시연)" | 실제 웹 링크 `/c/<token>` |
 | 실시간 알림 | 없음 | 임대인이 응답하면 앱 위쪽에 배너 |
 | 계약서 사진으로 채우기 | 사용할 수 없음 (로그인 안내) | 사용 가능 |
 
 서버 설정(`.env.local`)이 없으면 로그인 버튼이 꺼지고 데모 모드만 쓸 수 있습니다.
+
+결제 화면은 시연용 모의 결제입니다. 서버 모드에서 결제 버튼을 눌러도 DB에는 `pending` 리포트만 저장하며, 실제 `paid` 상태와 결제 내역을 기록하는 PG 연동·서버 웹훅은 아직 연결되지 않았습니다.
 
 ## Supabase 설정
 
@@ -50,16 +53,22 @@ npx expo start
    | `20261021000000_landlord_verify_events.sql` | 임대인용 사진 링크, 원본 검증 RPC(`verify_hash`), 알림·활동 `events` 테이블, 임대인 응답을 알림으로 남기는 트리거 |
    | `20261022000000_landlord_guard.sql` | 세입자가 자기 링크를 열면 열람으로 기록하지 않고, 세입자가 스스로 서명하는 것을 막음 |
    | `20261023000000_realtime_events.sql` | `events` 테이블을 Realtime에 등록 (실시간 알림 배너) |
+   | `20261024000000_replace_photo_defects.sql` | 사진 하자 태그를 RLS 아래에서 원자적으로 교체하는 RPC |
+   | `20261025000000_create_lease_rpc.sql` | 집·기본 구역·점검 단계를 생성하고 현재 집을 전환하는 원자적 RPC |
+   | `20261026000000_defect_report_photos.sql` | 하자 신고에 같은 집의 거주 기록 사진을 최대 5장 연결 |
+   | `20261027000000_validate_photo_zone_lease.sql` | 사진의 점검 단계와 구역이 같은 집에 속하는지 서버에서 검증 |
+| `20261028000000_reports_payment_guard.sql` | 클라이언트는 `pending` 리포트만 만들 수 있고 결제 완료 상태를 조작할 수 없도록 제한 |
 
 2. `.env.example`을 `.env.local`로 복사하고 프로젝트 URL과 **publishable(anon) 키**를 넣습니다. service_role 키는 절대 넣지 않습니다.
 3. 개발 서버를 다시 시작합니다(`npx expo start --clear`).
 4. 앱에서 이메일로 가입합니다. 프로젝트에서 이메일 인증을 켜 두었다면 메일의 링크를 누른 뒤 로그인합니다.
+5. 비밀번호 재설정 메일의 링크가 앱으로 돌아오도록 대시보드 **Authentication → URL Configuration → Redirect URLs**에 `jachwisillok://reset-password`와 배포한 웹 주소의 `/reset-password` 경로를 추가합니다. Expo Go에서 테스트할 때는 `exp://.../--/reset-password` 형식의 개발 리다이렉트 주소도 허용 목록에 추가해야 합니다.
 
 ## AI 기능 설정
 
 AI 하자 태깅과 계약서 읽기는 Edge Function `vision`이 OpenAI를 호출해서 처리합니다. 앱에는 OpenAI 키를 넣지 않습니다.
 
-1. 함수를 배포합니다. 처음이면 `npx supabase login`을 먼저 실행합니다.
+1. 저장소 루트의 `supabase/config.toml`은 `vision`의 JWT 검증을 켜 둡니다. 처음이면 `npx supabase login`을 실행하고, 팀의 Supabase 프로젝트 ref를 지정해 함수를 배포합니다.
 
    ```bash
    npx supabase functions deploy vision --project-ref <project-ref>
@@ -101,7 +110,7 @@ AI 하자 태깅과 계약서 읽기는 Edge Function `vision`이 OpenAI를 호�
 | 퇴거 오버레이 (FR-14) | 카메라, 퇴거 기록 | 같은 구역의 입주 사진을 반투명하게 겹쳐 같은 구도로 찍게 합니다. |
 | 구역 추가와 구역 상세 | 기록 탭 | 구역마다 입주, 거주 중, 퇴거 사진을 한눈에 봅니다. |
 | 거주 중 하자 신고 | 홈 | 새로 생긴 하자를 기록으로 남깁니다. |
-| 샘플 사진 | 카메라 | 카메라를 쓸 수 없는 환경(웹, 권한 거부)에서 같은 흐름을 시연합니다. |
+| 샘플 사진 | 데모 모드의 카메라·비교 화면 | 카메라를 쓸 수 없는 환경에서 촬영과 퇴거 비교 흐름을 시연합니다. 서버 모드는 실제 촬영만 원본 증거로 저장합니다. |
 
 ### 임대인 확인
 
@@ -119,7 +128,8 @@ AI 하자 태깅과 계약서 읽기는 Edge Function `vision`이 OpenAI를 호�
 |---|---|---|
 | 입주·퇴거 비교 리포트 (FR-17) | 리포트 → 비교 결과 → 결제 | 구역별 변화와 하자를 비교하고 PDF로 공유합니다. |
 | 퇴거 단독 리포트 (FR-20) | 리포트 → 퇴거 단독 리포트 | 입주 기록이 없을 때 통상 손모 체크리스트와 함께 발급합니다. |
-| 원본 검증 (FR-18) | 리포트 또는 내 집 → 원본 검증 | 사진 파일이나 해시를 넣으면 서버 기록과 대조합니다. |
+| 원본 검증 (FR-18) | 리포트 또는 내 집 → 원본 검증 | 사진 파일은 기기에서 SHA-256을 계산하고, 직접 입력한 해시와 함께 서버 기록에 대조합니다. 사진 파일은 업로드하지 않습니다. |
+| 분쟁 대응 문서 초안 | 리포트 → 분쟁 대응 문서 | 하자 신고를 참고해 내용을 편집하고 내용증명 또는 조정 신청서 초안을 PDF로 저장·공유합니다. 공식 서식이나 법률 자문은 아닙니다. |
 
 ### 계정과 집 관리
 
@@ -154,6 +164,7 @@ AI 하자 태깅과 계약서 읽기는 Edge Function `vision`이 OpenAI를 호�
 | `/tagging` | 하자 태깅 확인 (사진을 눌러 태그 추가) |
 | `/zone/[id]` | 구역 상세 |
 | `/defect-report` | 거주 중 하자 신고 |
+| `/defect-reports` | 저장된 하자 신고 내역과 첨부 사진 |
 | `/notifications` | 알림 |
 | `/certificate` | 입주 상태 확인서 미리보기와 PDF |
 | `/share` | 임대인 공유 시트 |
@@ -161,6 +172,7 @@ AI 하자 태깅과 계약서 읽기는 Edge Function `vision`이 OpenAI를 호�
 | `/landlord` | 임대인 확인 화면 시연 (데모 모드) |
 | `/compare` | 입주·퇴거 비교 결과 |
 | `/payment` | 리포트 결제 (`key=compare` 또는 `only`, 모의 결제) |
+| `/dispute-document` | 분쟁 대응 문서 초안 작성과 PDF 저장·공유 |
 | `/checklist` | 퇴거 통상 손모 체크리스트 |
 | `/verify` | 원본 검증 |
 | `/lease-register` | 집 등록과 수정 (`edit=1`) |
@@ -194,7 +206,7 @@ app/
 npx tsc --noEmit
 npx expo lint
 npx expo export --platform web
-npx -y deno@2 check ../supabase/functions/vision/index.ts
+npx -y deno@2 check --config ../supabase/functions/vision/deno.json ../supabase/functions/vision/index.ts
 ```
 
 ## 문제 해결
@@ -206,5 +218,5 @@ npx -y deno@2 check ../supabase/functions/vision/index.ts
 | 태깅 화면에 "AI 분석을 쓸 수 없어서…" | `vision` 함수가 배포되지 않았거나 `OPENAI_API_KEY` 시크릿이 없습니다. |
 | 임대인이 응답해도 배너가 뜨지 않음 | `20261023000000_realtime_events.sql`을 실행했는지 확인합니다. 앱이 서버 모드로 열려 있어야 배너가 뜹니다. |
 | 임대인 링크가 열리지 않음 | 웹 빌드를 호스팅하고 `EXPO_PUBLIC_WEB_URL`을 지정해야 합니다. |
-| 퇴거 알림이 예약되지 않음 | Expo Go는 로컬 알림을 지원하지 않습니다. 개발 빌드에서 확인합니다. |
+| 퇴거 알림이 예약되지 않음 | iOS·Android의 알림 권한을 허용했는지 확인합니다. 웹에서는 로컬 알림을 예약할 수 없습니다. |
 | 오래 열어 둔 뒤 사진이 안 보임 | 서명 URL이 만료된 상태입니다. 앱을 백그라운드에서 다시 열면 자동으로 새로 받습니다. |

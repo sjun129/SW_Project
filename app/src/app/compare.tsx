@@ -12,7 +12,7 @@ const classify = (zoneName: string, d: Defect) =>
     : { label: '임차인 과실 의심', tone: 'red' as const, why: '입주 기록에 없던 손상이에요' };
 
 export default function Compare() {
-  const { zones, photosOf, addPhoto, paid } = useStore();
+  const { zones, photosOf, addPhoto, paid, mode } = useStore();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const pairs = zones.map((z) => ({ z, a: photosOf('in', z.id).at(-1), b: photosOf('out', z.id).at(-1) })).filter((x) => x.a && x.b);
@@ -21,6 +21,7 @@ export default function Compare() {
 
   // Demo helper: fill move-out photos for zones that already have move-in photos.
   const demoFill = async () => {
+    if (mode !== 'demo') return;
     setBusy(true);
     try {
     for (const z of zones.filter((z) => photosOf('in', z.id).length && !photosOf('out', z.id).length)) {
@@ -37,7 +38,7 @@ export default function Compare() {
         <T size={13} color={C.muted} style={{ textAlign: 'center' }}>입주 때 찍은 구역을 퇴거 전에 같은 구도로 찍으면{'\n'}달라진 부분을 찾아 드려요.</T>
       </View>
       <Btn label="퇴거 사진 찍기" icon="camera" onPress={() => router.push({ pathname: '/camera', params: { stage: 'out' } })} />
-      <Btn label={busy ? '채우는 중…' : '샘플 퇴거 사진으로 채우기 (시연)'} kind="soft" disabled={busy} onPress={demoFill} />
+      {mode === 'demo' && <Btn label={busy ? '채우는 중…' : '샘플 퇴거 사진으로 채우기 (시연)'} kind="soft" disabled={busy} onPress={demoFill} />}
       {!!err && <T size={12.5} color={C.red}>{err}</T>}
     </Screen>
   );

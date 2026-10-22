@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, TextInput, View } from 'react-native';
 import { authErrorKo, supabase, supabaseConfigured } from '@/lib/supabase';
@@ -42,7 +43,7 @@ export default function Login() {
   const reset = () => {
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setMsg({ text: '비밀번호를 찾을 이메일을 먼저 입력해 주세요.' });
     run(async () => {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: Linking.createURL('/reset-password') });
       if (error) return setMsg({ text: authErrorKo(error.message) });
       setMsg({ ok: true, text: `${email.trim()}로 비밀번호 재설정 메일을 보냈어요.` });
     });

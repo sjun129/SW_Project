@@ -7,7 +7,7 @@ import { errText, useStore } from '@/store';
 import { C } from '@/theme';
 import { Card, Chip, Header, Icon, IconBox, Pill, Row, Screen, T } from '@/ui';
 
-const REMINDER_MSG = { scheduled: '계약 만료 30일 전에 알려 드려요.', denied: '알림 권한이 꺼져 있어요. 설정에서 허용해 주세요.', past: '만료 30일 전이 이미 지나서 예약하지 않았어요.', unsupported: 'Expo Go와 웹에서는 알림을 예약할 수 없어요. 앱으로 설치(개발 빌드)하면 동작해요.' };
+const REMINDER_MSG = { scheduled: '계약 만료 30일 전에 알려 드려요.', denied: '알림 권한이 꺼져 있어요. 설정에서 허용해 주세요.', past: '만료 30일 전이 이미 지나서 예약하지 않았어요.', unsupported: '현재 플랫폼에서는 알림을 예약할 수 없어요. iOS 또는 Android 앱에서 이용해 주세요.' };
 
 export default function MyHome() {
   const { lease, leases, switchLease, setLoggedIn, resetDemo, mode } = useStore();
@@ -25,6 +25,13 @@ export default function MyHome() {
       setNote(REMINDER_MSG[await scheduleMoveOutReminder(lease.end)]);
     } catch (e) { setNote(errText(e)); }
   };
+  const chooseLease = async (id: string, end: string) => {
+    try {
+      await switchLease(id);
+      if (reminder) setNote(REMINDER_MSG[await scheduleMoveOutReminder(end)]);
+      else await cancelMoveOutReminder();
+    } catch (e) { setNote(errText(e)); }
+  };
   const logout = async () => { if (mode === 'remote') await supabase.auth.signOut(); resetDemo(); setLoggedIn(false); router.replace('/'); };
 
   return (
@@ -40,7 +47,7 @@ export default function MyHome() {
         ))}
       </Card>
       {others.map((l) => (
-        <Card key={l.id} onPress={() => void switchLease(l.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <Card key={l.id} onPress={() => void chooseLease(l.id, l.end)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <IconBox name="key" bg={C.sunk} color={C.muted} />
           <View style={{ flex: 1 }}><T size={14} w="b">{l.address}</T><T size={12.5} color={C.muted}>{l.start.slice(0, 7)} ~ {l.end.slice(0, 7)} · 눌러서 전환</T></View>
           <Icon name="chevron-right" size={18} color={C.muted} />
