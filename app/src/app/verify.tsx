@@ -25,7 +25,7 @@ export default function Verify() {
   };
 
   const choosePhoto = async () => {
-    setErr('');
+    setErr(''); setRes(null);
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) throw new Error('사진 접근 권한을 허용해 주세요.');
