@@ -159,6 +159,7 @@ AI 하자 태깅과 계약서 읽기는 Edge Function `vision`이 OpenAI를 호�
 | `/tagging` | 하자 태깅 확인 (사진을 눌러 태그 추가) |
 | `/zone/[id]` | 구역 상세 |
 | `/defect-report` | 거주 중 하자 신고 |
+| `/defect-reports` | 저장된 하자 신고 내역과 첨부 사진 |
 | `/notifications` | 알림 |
 | `/certificate` | 입주 상태 확인서 미리보기와 PDF |
 | `/share` | 임대인 공유 시트 |

@@ -43,7 +43,7 @@ export default function DefectReport() {
     catch (e) { setErr(errText(e)); setSaving(false); }
   };
   return (
-    <Screen header={<Header title="하자 신고" />} footer={<Footer><Btn label={saving ? '저장 중…' : '신고 저장'} onPress={save} disabled={saving} /></Footer>}>
+    <Screen header={<Header title="하자 신고" right={<Pressable onPress={() => router.push('/defect-reports')}><T size={13} w="b" color={C.accent}>신고 내역</T></Pressable>} />} footer={<Footer><Btn label={saving ? '저장 중…' : '신고 저장'} onPress={save} disabled={saving} /></Footer>}>
       <T size={14} w="b">사진 첨부 <T size={12} color={C.muted}>{selectedIds.length}/{MAX_PHOTOS}</T></T>
       <Row gap={8} style={{ flexWrap: 'wrap' }}>
         {selectedPhotos.map((p) => (
