@@ -118,7 +118,14 @@ export async function createConfirmation(inspectionId: string, channel: string, 
   const signed = photoIds.length
     ? ok(await supabase.storage.from('originals').createSignedUrls(photoIds.map((id) => storageKey(uidv, inspectionId, id)), LINK_DAYS * 86400))
     : [];
-  const photo_urls = Object.fromEntries(photoIds.map((id, i) => [id, signed[i]?.signedUrl ?? null]).filter(([, u]) => u));
+  const photo_urls: Record<string, string> = {};
+  for (const [i, id] of photoIds.entries()) {
+    const item = signed[i];
+    if (item?.error || !item?.signedUrl) {
+      throw new Error('확인서 사진 링크를 만들지 못했어요. 사진 업로드 상태를 확인한 뒤 다시 시도해 주세요.');
+    }
+    photo_urls[id] = item.signedUrl;
+  }
   return ok(await supabase.from('confirmations').insert({ inspection_id: inspectionId, channel, photo_urls }).select('id,token,channel,status,signer_name,comment,sent_at').single()) as ConfirmationRow;
 }
 
