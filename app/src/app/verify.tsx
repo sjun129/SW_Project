@@ -1,6 +1,7 @@
+import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, TextInput, View } from 'react-native';
-import { short } from '@/hash';
+import { hashBytes, readBytes, short } from '@/hash';
 import type { VerifyResult } from '@/lib/db';
 import { errText, fmtTime, STAGE_LABEL, useStore } from '@/store';
 import { C, FONT } from '@/theme';
@@ -15,6 +16,7 @@ export default function Verify() {
   const [res, setRes] = useState<VerifyResult | null>(null);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [pickedName, setPickedName] = useState('');
   const valid = /^[0-9a-f]{64}$/i.test(hash.trim());
 
   const run = async (h = hash) => {
@@ -22,13 +24,32 @@ export default function Verify() {
     try { setRes(await verify(h)); } catch (e) { setErr(errText(e)); } finally { setBusy(false); }
   };
 
+  const choosePhoto = async () => {
+    setErr('');
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) throw new Error('사진 접근 권한을 허용해 주세요.');
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 1 });
+      const asset = result.canceled ? undefined : result.assets[0];
+      if (!asset?.uri) return;
+      setBusy(true);
+      const digest = await hashBytes(await readBytes(asset.uri));
+      setHash(digest);
+      setPickedName(asset.fileName ?? '선택한 사진');
+      await run(digest);
+    } catch (e) { setErr(errText(e)); }
+    finally { setBusy(false); }
+  };
+
   return (
     <Screen header={<Header title="원본 검증" />}>
       <T size={13} color={C.muted}>{mode === 'remote'
         ? '사진 파일의 SHA-256 값을 넣으면, 자취실록 서버에 같은 원본이 언제 등록됐는지 확인해요.'
         : '데모 사진의 SHA-256 값으로 현재 데모 기록을 찾아요. 서버에 등록된 원본을 확인하려면 로그인해야 해요.'} 사진이 한 픽셀이라도 바뀌면 값이 달라져요.</T>
-      <TextInput nativeID="verify-hash" value={hash} onChangeText={setHash} autoCapitalize="none" autoCorrect={false} multiline placeholder="64자리 SHA-256 값"
+      <TextInput nativeID="verify-hash" value={hash} onChangeText={(value) => { setHash(value); setPickedName(''); }} autoCapitalize="none" autoCorrect={false} multiline placeholder="64자리 SHA-256 값"
         placeholderTextColor={C.muted} style={{ backgroundColor: C.field, borderRadius: 12, padding: 14, minHeight: 72, fontFamily: FONT.mono, fontSize: 13, color: C.ink, includeFontPadding: false, textAlignVertical: 'top' }} />
+      <Btn kind="soft" icon="image" label={busy ? '사진 확인 중…' : '사진 파일에서 해시 계산'} disabled={busy} onPress={choosePhoto} />
+      {!!pickedName && <T size={12} color={C.muted}>{pickedName}의 해시를 계산했어요.</T>}
       {!!hash && !valid && <T size={12} color={C.red}>SHA-256은 0-9, a-f로 이루어진 64자리예요.</T>}
       <Btn label="검증하기" icon="shield" disabled={!valid || busy} onPress={() => run()} />
       {busy && <ActivityIndicator color={C.accent} />}
@@ -51,7 +72,7 @@ export default function Verify() {
         <View style={{ gap: 8 }}>
           <T size={13} w="b" color={C.muted}>내 사진에서 고르기</T>
           {photos.slice(-5).reverse().map((p) => (
-            <Pressable key={p.id} onPress={() => { setHash(p.hash); run(p.hash); }}>
+            <Pressable key={p.id} onPress={() => { setPickedName(''); setHash(p.hash); run(p.hash); }}>
               <Row gap={10} style={{ backgroundColor: C.surface, borderRadius: 12, padding: 12 }}>
                 <View style={{ flex: 1 }}>
                   <T size={13.5} w="m">{zones.find((z) => z.id === p.zoneId)?.name} · {STAGE_LABEL[p.stage]}</T>
