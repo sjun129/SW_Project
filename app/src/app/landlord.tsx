@@ -19,6 +19,7 @@ export default function Landlord() {
   const defects = ps.reduce((n, p) => n + p.defects.length, 0);
   const unit = lease.address.split(' ').at(-1);
   const done = confirm.status === 'signed' || confirm.status === 'objected';
+  const canRespond = confirm.status === 'sent' || confirm.status === 'viewed';
 
   if (mode !== 'demo') return (
     <Screen header={<Header title="임대인 확인" />}>
@@ -53,8 +54,8 @@ export default function Landlord() {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       {bar}
       <Screen gap={12} footer={<Footer>
-        <Btn kind="ghost" label="이의 남기기" disabled={!comment.trim()} onPress={() => respond(false, signer, `${zones.find((z) => z.id === objectFor)?.name ?? ''}: ${comment}`)} />
-        <Btn label="확인했어요" onPress={() => respond(true, signer.trim() || '임대인')} />
+        <Btn kind="ghost" label="이의 남기기" disabled={!canRespond || !comment.trim()} onPress={() => respond(false, signer, `${zones.find((z) => z.id === objectFor)?.name ?? ''}: ${comment}`)} />
+        <Btn label="확인했어요" disabled={!canRespond} onPress={() => respond(true, signer.trim() || '임대인')} />
       </Footer>}>
         <Card style={{ gap: 8 }}>
           <Image source={LOGO_COMPACT} style={{ width: 68, height: 22 }} resizeMode="contain" />

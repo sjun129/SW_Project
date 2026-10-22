@@ -293,12 +293,13 @@ function useStoreValue() {
   }, [confirm.status, notify]);
 
   const landlordRespond = useCallback(async (okv: boolean, signer: string, comment?: string) => {
+    if (confirm.status !== 'sent' && confirm.status !== 'viewed') throw new Error('먼저 임대인 확인 요청을 보내 주세요.');
     setConfirm((c) => ({ ...c, status: okv ? 'signed' : 'objected', signer, comment }));
     log(okv ? '임대인 확인 완료' : '임대인 이의', okv ? `${signer} 서명 · 기록 잠금` : comment);
     notify(okv
       ? { icon: 'check-circle', tone: 'ok', title: `${signer} 님이 확인했어요`, body: '입주 기록이 잠겨 퇴거 비교의 기준점이 됐어요' }
       : { icon: 'alert-triangle', tone: 'red', title: '임대인이 이의를 남겼어요', body: comment || '항목을 고쳐 다시 보낼 수 있어요' });
-  }, [log, notify]);
+  }, [confirm.status, log, notify]);
 
   const addDefectReport = useCallback(async (r: Omit<DefectReport, 'id' | 'time'>) => {
     if (remote) await db.createDefectReport(lease.id, r);
