@@ -7,7 +7,7 @@ import { errText, useStore } from '@/store';
 import { C } from '@/theme';
 import { Card, Chip, Header, Icon, IconBox, Pill, Row, Screen, T } from '@/ui';
 
-const REMINDER_MSG = { scheduled: '계약 만료 30일 전에 알려 드려요.', denied: '알림 권한이 꺼져 있어요. 설정에서 허용해 주세요.', past: '만료 30일 전이 이미 지나서 예약하지 않았어요.', unsupported: 'Expo Go와 웹에서는 알림을 예약할 수 없어요. 앱으로 설치(개발 빌드)하면 동작해요.' };
+const REMINDER_MSG = { scheduled: '계약 만료 30일 전에 알려 드려요.', denied: '알림 권한이 꺼져 있어요. 설정에서 허용해 주세요.', past: '만료 30일 전이 이미 지나서 예약하지 않았어요.', unsupported: '현재 플랫폼에서는 알림을 예약할 수 없어요. iOS 또는 Android 앱에서 이용해 주세요.' };
 
 export default function MyHome() {
   const { lease, leases, switchLease, setLoggedIn, resetDemo, mode } = useStore();
