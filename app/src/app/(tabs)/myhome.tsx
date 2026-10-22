@@ -25,6 +25,13 @@ export default function MyHome() {
       setNote(REMINDER_MSG[await scheduleMoveOutReminder(lease.end)]);
     } catch (e) { setNote(errText(e)); }
   };
+  const chooseLease = async (id: string, end: string) => {
+    try {
+      await switchLease(id);
+      if (reminder) setNote(REMINDER_MSG[await scheduleMoveOutReminder(end)]);
+      else await cancelMoveOutReminder();
+    } catch (e) { setNote(errText(e)); }
+  };
   const logout = async () => { if (mode === 'remote') await supabase.auth.signOut(); resetDemo(); setLoggedIn(false); router.replace('/'); };
 
   return (
@@ -40,7 +47,7 @@ export default function MyHome() {
         ))}
       </Card>
       {others.map((l) => (
-        <Card key={l.id} onPress={() => void switchLease(l.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <Card key={l.id} onPress={() => void chooseLease(l.id, l.end)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <IconBox name="key" bg={C.sunk} color={C.muted} />
           <View style={{ flex: 1 }}><T size={14} w="b">{l.address}</T><T size={12.5} color={C.muted}>{l.start.slice(0, 7)} ~ {l.end.slice(0, 7)} · 눌러서 전환</T></View>
           <Icon name="chevron-right" size={18} color={C.muted} />

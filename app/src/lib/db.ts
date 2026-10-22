@@ -71,17 +71,14 @@ export async function loadSnapshot(): Promise<Snapshot | null> {
 export async function createLease(l: { address: string; start: string; end: string; deposit: number; landlord: string }) {
   const uidv = await currentUserId();
   if (!uidv) throw new Error('로그인이 필요해요.');
-  ok(await supabase.from('leases').update({ is_current: false }).eq('user_id', uidv).eq('is_current', true));
-  const lease = ok(await supabase.from('leases').insert({ address: l.address, start_date: l.start, end_date: l.end, deposit: l.deposit, landlord_contact: l.landlord || null }).select('id').single()) as { id: string };
-  ok(await supabase.from('zones').insert(DEFAULT_ZONES.map(([name, tip], sort) => ({ lease_id: lease.id, name, tip, sort }))));
-  ok(await supabase.from('inspections').insert(Object.values(STAGE_DB).map((type) => ({ lease_id: lease.id, type }))));
-  return lease.id;
+  return ok(await supabase.rpc('create_lease_with_defaults', {
+    p_address: l.address, p_start: l.start, p_end: l.end, p_deposit: l.deposit, p_landlord: l.landlord || '',
+  })) as string;
 }
 
 export async function setCurrentLease(id: string) {
-  const uidv = await currentUserId();
-  ok(await supabase.from('leases').update({ is_current: false }).eq('user_id', uidv!).neq('id', id));
-  ok(await supabase.from('leases').update({ is_current: true }).eq('id', id));
+  if (!(await currentUserId())) throw new Error('로그인이 필요해요.');
+  ok(await supabase.rpc('set_current_lease', { p_lease: id }));
 }
 
 export async function createZone(leaseId: string, name: string, sort: number) {

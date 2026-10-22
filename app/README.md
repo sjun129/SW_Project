@@ -51,6 +51,7 @@ npx expo start
    | `20261022000000_landlord_guard.sql` | 세입자가 자기 링크를 열면 열람으로 기록하지 않고, 세입자가 스스로 서명하는 것을 막음 |
    | `20261023000000_realtime_events.sql` | `events` 테이블을 Realtime에 등록 (실시간 알림 배너) |
 | `20261024000000_replace_photo_defects.sql` | 사진 하자 태그를 RLS 아래에서 원자적으로 교체하는 RPC |
+| `20261025000000_create_lease_rpc.sql` | 집·기본 구역·점검 단계를 생성하고 현재 집을 전환하는 원자적 RPC |
 
 2. `.env.example`을 `.env.local`로 복사하고 프로젝트 URL과 **publishable(anon) 키**를 넣습니다. service_role 키는 절대 넣지 않습니다.
 3. 개발 서버를 다시 시작합니다(`npx expo start --clear`).
