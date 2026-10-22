@@ -11,7 +11,7 @@ export type DefectRow = { id: string; photo_id: string; label: string; bbox: { x
 export type PhotoRow = { id: string; inspection_id: string; zone_id: string; storage_key: string; sha256: string; prev_hash: string; device_ts: string | null; server_ts: string; defects: DefectRow[] };
 export type ConfirmationRow = { id: string; token: string; channel: string | null; status: 'sent' | 'viewed' | 'signed' | 'objected'; signer_name: string | null; comment: string | null; sent_at: string };
 export type DefectReportRow = { id: string; category: string; place: string; memo: string | null; repair_requested: boolean; created_at: string };
-export type ReportRow = { id: string; type: 'compare' | 'move_out_only'; status: 'pending' | 'paid' | 'issued' };
+export type ReportRow = { id: string; type: 'compare' | 'move_out_only'; status: 'pending' | 'paid' | 'issued'; diff: unknown; created_at: string };
 export type EventRow = { id: string; kind: 'activity' | 'notice'; icon: string | null; tone: string | null; title: string; body: string | null; read_at: string | null; created_at: string };
 
 export const DEFAULT_ZONES: [string, string][] = [
@@ -48,7 +48,7 @@ export async function loadSnapshot(): Promise<Snapshot | null> {
     supabase.from('zones').select('id,name,tip,sort').eq('lease_id', lease.id).order('sort'),
     supabase.from('inspections').select('id,type,chain_hash').eq('lease_id', lease.id),
     supabase.from('defect_reports').select('id,category,place,memo,repair_requested,created_at').eq('lease_id', lease.id).order('created_at', { ascending: false }),
-    supabase.from('reports').select('id,type,status').eq('lease_id', lease.id),
+    supabase.from('reports').select('id,type,status,diff,created_at').eq('lease_id', lease.id).order('created_at', { ascending: false }),
     supabase.from('events').select('id,kind,icon,tone,title,body,read_at,created_at').eq('lease_id', lease.id).order('created_at', { ascending: false }).limit(100),
   ]);
   const zones = ok(z) as ZoneRow[], inspections = ok(ins) as InspectionRow[], defectReports = ok(dr) as DefectReportRow[], reports = ok(rp) as ReportRow[], events = ok(ev) as EventRow[];

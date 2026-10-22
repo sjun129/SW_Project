@@ -53,6 +53,13 @@ export const uid = () => Math.random().toString(36).slice(2, 10);
 const STAGES: Stage[] = ['in', 'live', 'out'];
 const fromDb = (t: db.DbStage): Stage => (t === 'move_in' ? 'in' : t === 'living' ? 'live' : 'out');
 const won = (n: number | string) => String(n).replace(/[^\d]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',') || '0';
+const checklistFromDiff = (diff: unknown): Record<string, boolean> => {
+  if (!diff || typeof diff !== 'object' || Array.isArray(diff)) return {};
+  const value = (diff as { checklist?: unknown }).checklist;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const allowed = new Set(CHECKLIST.map((item) => item.id));
+  return Object.fromEntries(Object.entries(value).filter(([id, checked]) => allowed.has(id) && typeof checked === 'boolean'));
+};
 
 /** Mock AI tagging (FR-06), keyed by zone name so it works for server zones too. Deterministic so demos repeat. */
 export function mockDetect(zoneName: string, stage: Stage): Defect[] {
@@ -118,6 +125,7 @@ function useStoreValue() {
   const [suggestionHidden, setSuggestionHidden] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
+  const checklistLeaseId = useRef<string | null>(null);
 
   const lease = leases.find((l) => l.current) ?? EMPTY_LEASE;
   const remote = mode === 'remote';
@@ -142,7 +150,7 @@ function useStoreValue() {
     setMode('remote');
     if (!s) {
       setLeases([]); setZones([]); setPhotos([]); setChains({ in: ZERO_HASH, live: ZERO_HASH, out: ZERO_HASH }); setInspectionIds({});
-      setConfirm({ status: 'none' }); setDefectReports([]); setPaid({}); setActivity([]); setNotis([]);
+      setConfirm({ status: 'none' }); setDefectReports([]); setPaid({}); setActivity([]); setNotis([]); setChecklist({}); checklistLeaseId.current = null;
       return false;
     }
     const cur = s.leases.find((l) => l.is_current) ?? s.leases[0];
@@ -160,6 +168,11 @@ function useStoreValue() {
     setConfirm(c ? { status: c.status, channel: c.channel ?? undefined, signer: c.signer_name ?? undefined, comment: c.comment ?? undefined, token: c.token } : { status: 'none' });
     setDefectReports(s.defectReports.map((r) => ({ id: r.id, category: r.category, place: r.place, memo: r.memo ?? '', repair: r.repair_requested, time: new Date(r.created_at).getTime() })));
     setPaid(Object.fromEntries(s.reports.filter((r) => r.status !== 'pending').map((r) => [r.type === 'compare' ? 'compare' : 'only', true])));
+    if (checklistLeaseId.current !== cur.id) {
+      const latestOnlyReport = s.reports.find((r) => r.type === 'move_out_only' && r.status !== 'pending');
+      setChecklist(checklistFromDiff(latestOnlyReport?.diff));
+      checklistLeaseId.current = cur.id;
+    }
     const ev = s.events.map((e) => ({ e, time: new Date(e.created_at).getTime() }));
     setActivity(ev.filter(({ e }) => e.kind === 'activity').map(({ e, time }) => ({ id: e.id, title: e.title, detail: e.body ?? undefined, time })));
     setNotis(ev.filter(({ e }) => e.kind === 'notice').map(({ e, time }) => ({ id: e.id, icon: (e.icon ?? 'check-circle') as Noti['icon'], tone: (e.tone ?? 'accent') as Noti['tone'], title: e.title, body: e.body ?? '', time, unread: !e.read_at })));
@@ -198,8 +211,18 @@ function useStoreValue() {
     return () => { supabase.removeChannel(ch); };
   }, [mode, lease.id]);
   const resetDemo = useCallback(() => {
+    checklistLeaseId.current = null;
     setMode('demo'); setZones(DEMO_ZONES); setPhotos(demoPhotos()); setChains(DEMO_CHAINS); setLeases(DEMO_LEASES); setInspectionIds({});
-    setConfirm({ status: 'none' }); setDefectReports([]); setPaid({});
+    setConfirm({ status: 'none' }); setDefectReports([]); setPaid({}); setChecklist({}); setSuggestionHidden(false); setToast(null);
+    setNotis([
+      { id: 'n1', icon: 'file-text', tone: 'ok', title: '입주 확인서가 준비됐어요', body: '지금 보내거나 나중에 보낼 수 있어요', time: t0 + 600000, unread: true },
+      { id: 'n2', icon: 'calendar', tone: 'muted', title: '계약 만료까지 남은 기간을 알려 드려요', body: '퇴거 30일 전에 다시 알려 드려요', time: t0, unread: false },
+    ]);
+    setActivity([
+      { id: 'a2', title: '바닥 촬영', detail: '하자 1건', time: t0 + 520000 },
+      { id: 'a1', title: '벽지 촬영', detail: '하자 1건', time: t0 + 460000 },
+      { id: 'a0', title: '집 등록', time: t0 },
+    ]);
   }, []);
 
   /** Lock a captured photo: hash the original bytes, then (signed in) upload once and let the server stamp time + extend the chain. */
