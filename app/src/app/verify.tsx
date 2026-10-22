@@ -10,7 +10,7 @@ const STAGE_KO = { move_in: STAGE_LABEL.in, living: STAGE_LABEL.live, move_out: 
 
 /** FR-18: check whether a SHA-256 belongs to a registered original, and when the server received it. */
 export default function Verify() {
-  const { verify, photos, zones } = useStore();
+  const { verify, photos, zones, mode } = useStore();
   const [hash, setHash] = useState('');
   const [res, setRes] = useState<VerifyResult | null>(null);
   const [err, setErr] = useState('');
@@ -24,7 +24,9 @@ export default function Verify() {
 
   return (
     <Screen header={<Header title="원본 검증" />}>
-      <T size={13} color={C.muted}>사진 파일의 SHA-256 값을 넣으면, 자취실록 서버에 같은 원본이 언제 등록됐는지 확인해요. 사진이 한 픽셀이라도 바뀌면 값이 달라져요.</T>
+      <T size={13} color={C.muted}>{mode === 'remote'
+        ? '사진 파일의 SHA-256 값을 넣으면, 자취실록 서버에 같은 원본이 언제 등록됐는지 확인해요.'
+        : '데모 사진의 SHA-256 값으로 현재 데모 기록을 찾아요. 서버에 등록된 원본을 확인하려면 로그인해야 해요.'} 사진이 한 픽셀이라도 바뀌면 값이 달라져요.</T>
       <TextInput nativeID="verify-hash" value={hash} onChangeText={setHash} autoCapitalize="none" autoCorrect={false} multiline placeholder="64자리 SHA-256 값"
         placeholderTextColor={C.muted} style={{ backgroundColor: C.field, borderRadius: 12, padding: 14, minHeight: 72, fontFamily: FONT.mono, fontSize: 13, color: C.ink, includeFontPadding: false, textAlignVertical: 'top' }} />
       {!!hash && !valid && <T size={12} color={C.red}>SHA-256은 0-9, a-f로 이루어진 64자리예요.</T>}
@@ -34,8 +36,10 @@ export default function Verify() {
       {res && (res.found ? (
         <Card style={{ backgroundColor: C.okSoft, gap: 6 }}>
           <Row gap={8}><Icon name="check-circle" size={18} color={C.ok} /><T size={15} w="b" color={C.ok}>등록된 원본이에요</T></Row>
-          <T size={13}>서버 확인 {new Date(res.server_ts).toLocaleString('ko-KR')} · {res.zone} · {STAGE_KO[res.stage]}</T>
-          <T size={12.5} color={C.muted}>{res.confirmed ? '임대인 확인까지 완료된 기록이에요.' : '임대인 확인은 아직 없는 기록이에요.'}</T>
+          <T size={13}>{mode === 'remote' ? '서버 등록' : '데모 기록'} {new Date(res.server_ts).toLocaleString('ko-KR')} · {res.zone} · {STAGE_KO[res.stage]}</T>
+          <T size={12.5} color={C.muted}>{mode === 'remote'
+            ? (res.confirmed ? '임대인 확인까지 완료된 기록이에요.' : '임대인 확인은 아직 없는 기록이에요.')
+            : '현재 데모 실행 중의 메모리 기록에서 해시를 찾았어요. 서버에 저장되거나 검증된 결과는 아니에요.'}</T>
         </Card>
       ) : (
         <Card style={{ backgroundColor: C.redSoft, gap: 6 }}>

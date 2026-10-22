@@ -15,7 +15,7 @@ const AI_NOTE = {
 
 export default function Tagging() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { photos, zones, updateDefects, photosOf } = useStore();
+  const { photos, zones, updateDefects, photosOf, mode } = useStore();
   const photo = photos.find((p) => p.id === id);
   const [label, setLabel] = useState(LABELS[0]);
   const [err, setErr] = useState('');
@@ -61,7 +61,7 @@ export default function Tagging() {
       <Row gap={10} style={{ backgroundColor: C.okSoft, borderRadius: 14, padding: 12 }}>
         <Icon name="lock" size={18} color={C.ok} />
         <View style={{ flex: 1 }}>
-          <T size={13} w="b" color={C.ok}>원본 고정 완료 · 서버 해시 일치{photo.sample ? ' (샘플)' : ''}</T>
+          <T size={13} w="b" color={C.ok}>{mode === 'remote' ? '원본 고정 완료 · 서버 해시 저장' : '데모 기록 · 이 기기에만 저장'}</T>
           <T size={11.5} w="mono" color={C.ok}>{short(photo.hash)} · {fmtTime(photo.serverTs)}</T>
         </View>
       </Row>
