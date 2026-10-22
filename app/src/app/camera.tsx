@@ -78,7 +78,9 @@ export default function Camera() {
         ) : (
           <View style={{ alignItems: 'center', gap: 12, padding: 24 }}>
             <Icon name="camera-off" size={28} color="#fff" />
-            <T size={13} color="#fff" style={{ textAlign: 'center' }}>카메라 권한이 없어요.{'\n'}권한을 허용하거나 샘플 사진으로 시연할 수 있어요.</T>
+            <T size={13} color="#fff" style={{ textAlign: 'center' }}>{mode === 'demo'
+              ? <>카메라 권한이 없어요.{'\n'}권한을 허용하거나 샘플 사진으로 시연할 수 있어요.</>
+              : <>카메라 권한이 없어요.{'\n'}권한을 허용해야 서버에 원본 증거를 저장할 수 있어요.</>}</T>
             <Btn label="카메라 권한 허용" kind="soft" onPress={requestPerm} style={{ flexGrow: 0, alignSelf: 'stretch' }} />
           </View>
         )}
