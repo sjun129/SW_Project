@@ -27,7 +27,16 @@
         "expo-camera",
         {
           "cameraPermission": "방 상태를 기록하려면 카메라 권한이 필요해요.",
-          "recordAudioAndroid": false
+          "recordAudioAndroid": false,
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "계약서 사진을 선택하고 원본 검증을 위해 사진 파일을 고를 때 사진 보관함 접근이 필요해요.",
+          "cameraPermission": "계약서 사진을 촬영하려면 카메라 권한이 필요해요.",
+          "microphonePermission": false
         }
       ],
       "expo-status-bar",
