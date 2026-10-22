@@ -11,6 +11,7 @@ export default function DisputeDocument() {
   const st = useStore();
   const [kind, setKind] = useState<DraftKind>('notice');
   const [tenant, setTenant] = useState('');
+  const [landlordName, setLandlordName] = useState('');
   const [facts, setFacts] = useState(() => st.defectReports.length
     ? st.defectReports.map((r) => `• ${r.place} · ${r.category}${r.memo ? `: ${r.memo}` : ''} (기록 ${new Date(r.time).toLocaleDateString('ko-KR')})`).join('\n')
     : '');
@@ -29,11 +30,11 @@ export default function DisputeDocument() {
       const tenantName = tenant.trim();
       const doc: PdfDoc = {
         title, docNo: `JS-DRAFT-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`,
-        meta: [['주소', st.lease.address], ['임대인', st.lease.landlord || '직접 입력 필요'], ['임차인', tenantName], ['작성일', new Date().toLocaleDateString('ko-KR')]],
+        meta: [['주소', st.lease.address], ['임대인', landlordName.trim() || '[임대인 성명]'], ['임대인 연락처', st.lease.landlord || '미등록'], ['임차인', tenantName], ['작성일', new Date().toLocaleDateString('ko-KR')]],
         photos: [], showPhotos: false,
         body: kind === 'notice'
-          ? `제목: 임대차 관련 사실 통지 및 요청\n\n수신인: ${st.lease.landlord || '[임대인 성명]'}\n발신인: ${tenantName}\n\n1. 사실관계\n${facts.trim()}\n\n2. 요청사항\n${request.trim()}\n\n위 내용에 대한 회신을 요청합니다.\n\n발신인: ${tenantName} (서명 또는 날인)`
-          : `신청 취지\n${request.trim()}\n\n분쟁 내용 및 경위\n${facts.trim()}\n\n당사자 정보\n임차인: ${tenantName}\n임대인: ${st.lease.landlord || '직접 입력 필요'}\n임대차 주소: ${st.lease.address}\n계약 기간: ${st.lease.start} ~ ${st.lease.end}\n보증금: ${st.lease.deposit}원`,
+          ? `제목: 임대차 관련 사실 통지 및 요청\n\n수신인: ${landlordName.trim() || '[임대인 성명]'}${st.lease.landlord ? ` (연락처: ${st.lease.landlord})` : ''}\n발신인: ${tenantName}\n\n1. 사실관계\n${facts.trim()}\n\n2. 요청사항\n${request.trim()}\n\n위 내용에 대한 회신을 요청합니다.\n\n발신인: ${tenantName} (서명 또는 날인)`
+          : `신청 취지\n${request.trim()}\n\n분쟁 내용 및 경위\n${facts.trim()}\n\n당사자 정보\n임차인: ${tenantName}\n임대인: ${landlordName.trim() || '[임대인 성명]'}${st.lease.landlord ? ` (연락처: ${st.lease.landlord})` : ''}\n임대차 주소: ${st.lease.address}\n계약 기간: ${st.lease.start} ~ ${st.lease.end}\n보증금: ${st.lease.deposit}원`,
         footer: '작성자가 편집한 초안입니다. 사실관계와 첨부자료를 확인한 뒤 사용하세요. 법률 자문이나 기관 제출용 공식 서식이 아닙니다.',
       };
       await exportPdf(doc);
@@ -51,6 +52,8 @@ export default function DisputeDocument() {
       <Card style={{ gap: 8 }}>
         <T size={13} w="b">임차인 이름</T>
         <TextInput accessibilityLabel="임차인 이름" placeholder="임차인 성명을 입력하세요" value={tenant} onChangeText={(v) => { setTenant(v); setError(''); }} style={inputStyle} />
+        <T size={13} w="b">임대인 이름</T>
+        <TextInput accessibilityLabel="임대인 이름" placeholder="임대인 성명을 입력하세요" value={landlordName} onChangeText={(v) => { setLandlordName(v); setError(''); }} style={inputStyle} />
         <T size={13} w="b">사실관계</T>
         <TextInput accessibilityLabel="사실관계" multiline placeholder="분쟁이 발생한 경위와 날짜, 상대방과 나눈 내용을 구체적으로 작성하세요." value={facts} onChangeText={(v) => { setFacts(v); setError(''); }} textAlignVertical="top" style={[inputStyle, { minHeight: 150 }]} />
         <T size={13} w="b">요청사항</T>
