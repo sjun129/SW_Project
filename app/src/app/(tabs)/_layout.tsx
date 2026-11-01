@@ -1,25 +1,26 @@
 import { Feather } from '@expo/vector-icons';
-import { router, Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/tabs';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C } from '@/theme';
 import { T, type IconName } from '@/ui';
 
-const TABS: { name: string; label: string; icon: IconName }[] = [
+const TABS: { name: 'home' | 'records' | 'reports' | 'myhome'; label: string; icon: IconName }[] = [
   { name: 'home', label: '홈', icon: 'home' },
   { name: 'records', label: '기록', icon: 'grid' },
   { name: 'reports', label: '리포트', icon: 'file-text' },
   { name: 'myhome', label: '내 집', icon: 'user' },
 ];
 
-function TabBar({ state, navigation }: BottomTabBarProps) {
+function TabBar({ state }: BottomTabBarProps) {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const active = state.routes[state.index]?.name;
   const item = (t: (typeof TABS)[number]) => {
     const on = t.name === active;
     return (
-      <Pressable key={t.name} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => navigation.navigate(t.name)} style={st.item}>
+      <Pressable key={t.name} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => router.navigate(`/(tabs)/${t.name}`)} style={st.item}>
         <Feather name={t.icon} size={22} color={on ? C.accent : C.muted} />
         <T size={11} w={on ? 'b' : 'm'} color={on ? C.accent : C.muted}>{t.label}</T>
       </Pressable>

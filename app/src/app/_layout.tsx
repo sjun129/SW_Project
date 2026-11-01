@@ -15,7 +15,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StoreProvider>
         {/* Status bar is controlled only here (native-stack); mixing it with expo-status-bar can hide it on Android */}
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg }, statusBarHidden: false, statusBarStyle: 'dark', statusBarTranslucent: true }}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg }, statusBarHidden: false, statusBarStyle: 'dark' }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="capture" options={sheet} />
