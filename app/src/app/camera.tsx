@@ -18,7 +18,7 @@ const guideFor = (name = '') => GUIDES.find(([k]) => name.includes(k))?.[1];
 
 export default function Camera() {
   const p = useLocalSearchParams<{ stage?: Stage; zone?: string }>();
-  const { zones, photosOf, addPhoto } = useStore();
+  const { zones, photosOf, addPhoto, mode } = useStore();
   const [stage, setStage] = useState<Stage>(p.stage ?? 'in');
   const [zone, setZone] = useState(p.zone ?? zones[0]?.id ?? '');
   const [err, setErr] = useState('');
@@ -44,7 +44,13 @@ export default function Camera() {
     const pic = await cam.current?.takePictureAsync({ quality: 0.8 });
     if (pic?.uri) await save({ uri: pic.uri }, pic.uri);
   };
-  const useSample = () => save(z && ['바닥', '현관'].includes(z.name) ? SAMPLE.floor : SAMPLE.wall, null);
+  const useSample = () => {
+    if (mode === 'remote') {
+      setErr('샘플 사진은 데모 모드에서만 쓸 수 있어요. 서버에 남기는 증거는 직접 촬영해 주세요.');
+      return;
+    }
+    void save(z && ['바닥', '현관'].includes(z.name) ? SAMPLE.floor : SAMPLE.wall, null);
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: C.photo }}>
@@ -72,7 +78,9 @@ export default function Camera() {
         ) : (
           <View style={{ alignItems: 'center', gap: 12, padding: 24 }}>
             <Icon name="camera-off" size={28} color="#fff" />
-            <T size={13} color="#fff" style={{ textAlign: 'center' }}>카메라 권한이 없어요.{'\n'}권한을 허용하거나 샘플 사진으로 시연할 수 있어요.</T>
+            <T size={13} color="#fff" style={{ textAlign: 'center' }}>{mode === 'demo'
+              ? <>카메라 권한이 없어요.{'\n'}권한을 허용하거나 샘플 사진으로 시연할 수 있어요.</>
+              : <>카메라 권한이 없어요.{'\n'}권한을 허용해야 서버에 원본 증거를 저장할 수 있어요.</>}</T>
             <Btn label="카메라 권한 허용" kind="soft" onPress={requestPerm} style={{ flexGrow: 0, alignSelf: 'stretch' }} />
           </View>
         )}
@@ -95,13 +103,15 @@ export default function Camera() {
           <Pressable accessibilityLabel="촬영" disabled={busy || !perm?.granted || !ready} onPress={shoot} style={[cs.shutter, (!perm?.granted || !ready) && { opacity: 0.4 }]}>
             {busy ? <ActivityIndicator color={C.accent} /> : <View style={cs.shutterInner} />}
           </Pressable>
-          <Pressable onPress={useSample} disabled={busy} style={{ alignItems: 'center', gap: 2, width: 56 }}>
-            <Icon name="image" size={20} color="#fff" /><T size={10} w="m" color="#fff">샘플 사진</T>
-          </Pressable>
+          {mode === 'demo' ? (
+            <Pressable onPress={useSample} disabled={busy} style={{ alignItems: 'center', gap: 2, width: 56 }}>
+              <Icon name="image" size={20} color="#fff" /><T size={10} w="m" color="#fff">샘플 사진</T>
+            </Pressable>
+          ) : <View style={{ width: 56 }} />}
         </View>
         {!!err && <T size={12} color="#FFB4B4" style={{ textAlign: 'center', paddingHorizontal: 16 }}>{err}</T>}
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4, paddingBottom: 10 }}>
-          <Icon name="lock" size={12} color="rgba(255,255,255,0.7)" /><T size={11} color="rgba(255,255,255,0.7)">촬영 즉시 해시와 서버 시각으로 원본을 고정해요 · 갤러리 업로드 불가</T>
+          <Icon name="lock" size={12} color="rgba(255,255,255,0.7)" /><T size={11} color="rgba(255,255,255,0.7)">{mode === 'remote' ? '실제 촬영만 서버 증거로 고정 · 갤러리 업로드 불가' : '촬영 즉시 해시를 계산해요 · 샘플로 시연 가능'}</T>
         </View>
       </SafeAreaView>
     </View>

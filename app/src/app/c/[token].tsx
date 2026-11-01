@@ -4,7 +4,7 @@ import { ActivityIndicator, Image, Pressable, TextInput, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as db from '@/lib/db';
 import { supabaseConfigured } from '@/lib/supabase';
-import { errText, useStore } from '@/store';
+import { errText, landlordLink, useStore } from '@/store';
 import { C } from '@/theme';
 import { Btn, Card, Footer, Icon, Legal, LOGO_COMPACT, Mascot, Pill, Row, s, Screen, T, TaggedPhoto } from '@/ui';
 
@@ -44,7 +44,7 @@ export default function LandlordLink() {
     <SafeAreaView edges={['top']} style={{ backgroundColor: C.surface }}>
       <Row gap={10} style={{ height: 60, paddingHorizontal: 16 }}>
         <Row gap={6} style={{ flex: 1, backgroundColor: C.field, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 }}>
-          <Icon name="lock" size={14} color={C.muted} /><T size={12} w="mono" color={C.muted} lines={1}>jachwisillok.kr/c/{token}</T>
+          <Icon name="lock" size={14} color={C.muted} /><T size={12} w="mono" color={C.muted} lines={1}>{landlordLink(token).replace(/^https?:\/\//, '')}</T>
         </Row>
         <Pressable accessibilityLabel="닫기" onPress={close}><Icon name="x" size={20} color={C.muted} /></Pressable>
       </Row>

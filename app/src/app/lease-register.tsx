@@ -9,6 +9,12 @@ import { C } from '@/theme';
 import { Btn, Footer, Header, Icon, Row, s, Screen, T } from '@/ui';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+const validDate = (value: string) => {
+  if (!DATE.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+};
 
 export default function LeaseRegister() {
   const { from, edit } = useLocalSearchParams<{ from?: string; edit?: string }>();
@@ -24,28 +30,28 @@ export default function LeaseRegister() {
   // Contract photo -> form values via the vision function. Only fills fields the model could read; the user still reviews and saves.
   const fromPhoto = async (camera: boolean) => {
     if (mode !== 'remote') return setOcr('계약서 읽기는 로그인한 뒤에 쓸 수 있어요.');
-    const perm = camera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return setOcr('사진 권한이 필요해요.');
-    const opts = { mediaTypes: ['images'] as ImagePicker.MediaType[], base64: true, quality: 0.6 };
-    const r = camera ? await ImagePicker.launchCameraAsync(opts) : await ImagePicker.launchImageLibraryAsync(opts);
-    const a = r.canceled ? undefined : r.assets[0];
-    if (!a?.base64) return;
-    setOcr('계약서를 읽는 중…'); setErr('');
     try {
+      const perm = camera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) return setOcr('사진 권한이 필요해요. 기기 설정에서 권한을 허용한 뒤 다시 시도해 주세요.');
+      const opts = { mediaTypes: ['images'] as ImagePicker.MediaType[], base64: true, quality: 0.6 };
+      const r = camera ? await ImagePicker.launchCameraAsync(opts) : await ImagePicker.launchImageLibraryAsync(opts);
+      const a = r.canceled ? undefined : r.assets[0];
+      if (!a?.base64) return;
+      setOcr('계약서를 읽는 중…'); setErr('');
       const g = await extractLease(`data:${a.mimeType ?? 'image/jpeg'};base64,${a.base64}`);
       setF((x) => ({
         address: g.address || x.address,
-        start: DATE.test(g.start_date) ? g.start_date : x.start,
-        end: DATE.test(g.end_date) ? g.end_date : x.end,
+        start: validDate(g.start_date) ? g.start_date : x.start,
+        end: validDate(g.end_date) ? g.end_date : x.end,
         deposit: g.deposit > 0 ? g.deposit.toLocaleString('ko-KR') : x.deposit,
         landlord: g.landlord_phone || x.landlord,
       }));
       setOcr('읽은 값을 채웠어요. 틀린 곳이 없는지 확인한 뒤 저장해 주세요.');
-    } catch (e) { setOcr(`계약서를 읽지 못했어요: ${errText(e)}`); }
+    } catch (e) { setOcr(`사진을 불러오거나 계약서를 읽지 못했어요: ${errText(e)}`); }
   };
   const save = async () => {
     if (!f.address.trim()) return setErr('주소를 입력해 주세요.');
-    if (!DATE.test(f.start) || !DATE.test(f.end)) return setErr('계약 기간은 2026-03-01 형식으로 입력해 주세요.');
+    if (!validDate(f.start) || !validDate(f.end)) return setErr('실제로 존재하는 날짜를 YYYY-MM-DD 형식으로 입력해 주세요.');
     if (f.end <= f.start) return setErr('계약 만료일은 시작일보다 뒤여야 해요.');
     setBusy(true); setErr('');
     try {

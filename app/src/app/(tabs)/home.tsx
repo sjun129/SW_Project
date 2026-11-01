@@ -6,7 +6,7 @@ import { Card, Icon, IconBox, LOGO_COMPACT, Mascot, Row, Screen, Section, T, typ
 
 export default function Home() {
   const st = useStore();
-  const { lease, dDay, inDone, zones, confirm, notis } = st;
+  const { lease, dDay, inDone, zones, confirm, notis, defectReports } = st;
   const remaining = zones.length - inDone;
   const unread = notis.some((n) => n.unread);
   const actions: { t: string; sub: string; icon: IconName; color: string; go: () => void }[] = [
@@ -74,6 +74,22 @@ export default function Home() {
             </Row>
           ))}
         </View>
+      </Section>
+
+      <Section title="거주 중 하자 신고" link="전체 보기" onLink={() => router.push('/defect-reports')}>
+        {defectReports.length ? (
+          <View style={hs.recent}>
+            {defectReports.slice(0, 2).map((r, i) => (
+              <Pressable key={r.id} onPress={() => router.push('/defect-reports')}>
+                <Row gap={10} style={[{ paddingVertical: 14 }, i > 0 && { borderTopWidth: 1, borderTopColor: C.line }]}>
+                  <Icon name="alert-triangle" size={16} color={C.red} />
+                  <View style={{ flex: 1 }}><T size={14} w="m">{r.place} · {r.category}</T><T size={12} color={C.muted} lines={1}>{r.memo || '메모 없음'}</T></View>
+                  <T size={12} w="mono" color={C.muted}>{fmtTime(r.time).slice(-5)}</T>
+                </Row>
+              </Pressable>
+            ))}
+          </View>
+        ) : <Card onPress={() => router.push('/defect-report')}><T size={13} color={C.muted}>새로 생긴 하자를 신고로 기록해 보세요.</T></Card>}
       </Section>
     </Screen>
   );

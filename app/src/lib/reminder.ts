@@ -1,13 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
 
 const ID = 'move-out-reminder';
 const DAY = 86400000;
 
-// expo-notifications needs native pieces that Expo Go (Android) does not ship; importing it at startup
-// crashes the whole app there. Load it lazily, and only outside Expo Go / web.
-const supported = Platform.OS !== 'web' && Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
+// Local notifications are supported in Expo Go on SDK 57. Keep the module lazy so web never loads
+// native-only code; the runtime check still returns unsupported if a platform build lacks the module.
+const supported = Platform.OS !== 'web';
 let handlerSet = false;
 async function notifications() {
   if (!supported) return null;

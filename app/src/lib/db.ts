@@ -10,8 +10,8 @@ export type InspectionRow = { id: string; type: DbStage; chain_hash: string };
 export type DefectRow = { id: string; photo_id: string; label: string; bbox: { x: number; y: number; w: number; h: number }; source: 'ai' | 'user'; confidence: number | null };
 export type PhotoRow = { id: string; inspection_id: string; zone_id: string; storage_key: string; sha256: string; prev_hash: string; device_ts: string | null; server_ts: string; defects: DefectRow[] };
 export type ConfirmationRow = { id: string; token: string; channel: string | null; status: 'sent' | 'viewed' | 'signed' | 'objected'; signer_name: string | null; comment: string | null; sent_at: string };
-export type DefectReportRow = { id: string; category: string; place: string; memo: string | null; repair_requested: boolean; created_at: string };
-export type ReportRow = { id: string; type: 'compare' | 'move_out_only'; status: 'pending' | 'paid' | 'issued' };
+export type DefectReportRow = { id: string; category: string; place: string; memo: string | null; repair_requested: boolean; photo_ids: string[]; created_at: string };
+export type ReportRow = { id: string; type: 'compare' | 'move_out_only'; status: 'pending' | 'paid' | 'issued'; diff: unknown; created_at: string };
 export type EventRow = { id: string; kind: 'activity' | 'notice'; icon: string | null; tone: string | null; title: string; body: string | null; read_at: string | null; created_at: string };
 
 export const DEFAULT_ZONES: [string, string][] = [
@@ -47,8 +47,8 @@ export async function loadSnapshot(): Promise<Snapshot | null> {
   const [z, ins, dr, rp, ev] = await Promise.all([
     supabase.from('zones').select('id,name,tip,sort').eq('lease_id', lease.id).order('sort'),
     supabase.from('inspections').select('id,type,chain_hash').eq('lease_id', lease.id),
-    supabase.from('defect_reports').select('id,category,place,memo,repair_requested,created_at').eq('lease_id', lease.id).order('created_at', { ascending: false }),
-    supabase.from('reports').select('id,type,status').eq('lease_id', lease.id),
+    supabase.from('defect_reports').select('id,category,place,memo,repair_requested,photo_ids,created_at').eq('lease_id', lease.id).order('created_at', { ascending: false }),
+    supabase.from('reports').select('id,type,status,diff,created_at').eq('lease_id', lease.id).order('created_at', { ascending: false }),
     supabase.from('events').select('id,kind,icon,tone,title,body,read_at,created_at').eq('lease_id', lease.id).order('created_at', { ascending: false }).limit(100),
   ]);
   const zones = ok(z) as ZoneRow[], inspections = ok(ins) as InspectionRow[], defectReports = ok(dr) as DefectReportRow[], reports = ok(rp) as ReportRow[], events = ok(ev) as EventRow[];
@@ -71,17 +71,14 @@ export async function loadSnapshot(): Promise<Snapshot | null> {
 export async function createLease(l: { address: string; start: string; end: string; deposit: number; landlord: string }) {
   const uidv = await currentUserId();
   if (!uidv) throw new Error('로그인이 필요해요.');
-  ok(await supabase.from('leases').update({ is_current: false }).eq('user_id', uidv).eq('is_current', true));
-  const lease = ok(await supabase.from('leases').insert({ address: l.address, start_date: l.start, end_date: l.end, deposit: l.deposit, landlord_contact: l.landlord || null }).select('id').single()) as { id: string };
-  ok(await supabase.from('zones').insert(DEFAULT_ZONES.map(([name, tip], sort) => ({ lease_id: lease.id, name, tip, sort }))));
-  ok(await supabase.from('inspections').insert(Object.values(STAGE_DB).map((type) => ({ lease_id: lease.id, type }))));
-  return lease.id;
+  return ok(await supabase.rpc('create_lease_with_defaults', {
+    p_address: l.address, p_start: l.start, p_end: l.end, p_deposit: l.deposit, p_landlord: l.landlord || '',
+  })) as string;
 }
 
 export async function setCurrentLease(id: string) {
-  const uidv = await currentUserId();
-  ok(await supabase.from('leases').update({ is_current: false }).eq('user_id', uidv!).neq('id', id));
-  ok(await supabase.from('leases').update({ is_current: true }).eq('id', id));
+  if (!(await currentUserId())) throw new Error('로그인이 필요해요.');
+  ok(await supabase.rpc('set_current_lease', { p_lease: id }));
 }
 
 export async function createZone(leaseId: string, name: string, sort: number) {
@@ -103,9 +100,10 @@ export async function uploadPhoto(p: { id: string; inspectionId: string; zoneId:
 }
 
 export async function replaceDefects(photoId: string, defects: { label: string; x: number; y: number; w: number; h: number; source: 'ai' | 'user'; conf?: number }[]) {
-  ok(await supabase.from('defects').delete().eq('photo_id', photoId));
-  if (!defects.length) return;
-  ok(await supabase.from('defects').insert(defects.map((d) => ({ photo_id: photoId, label: d.label, bbox: { x: d.x, y: d.y, w: d.w, h: d.h }, source: d.source, confidence: d.conf ?? null }))));
+  ok(await supabase.rpc('replace_photo_defects', {
+    p_photo: photoId,
+    p_defects: defects.map(({ label, x, y, w, h, source, conf }) => ({ label, x, y, w, h, source, conf: conf ?? null })),
+  }));
 }
 
 /** Storage path is deterministic, so it can be rebuilt from ids without another query. */
@@ -120,7 +118,14 @@ export async function createConfirmation(inspectionId: string, channel: string, 
   const signed = photoIds.length
     ? ok(await supabase.storage.from('originals').createSignedUrls(photoIds.map((id) => storageKey(uidv, inspectionId, id)), LINK_DAYS * 86400))
     : [];
-  const photo_urls = Object.fromEntries(photoIds.map((id, i) => [id, signed[i]?.signedUrl ?? null]).filter(([, u]) => u));
+  const photo_urls: Record<string, string> = {};
+  for (const [i, id] of photoIds.entries()) {
+    const item = signed[i];
+    if (item?.error || !item?.signedUrl) {
+      throw new Error('확인서 사진 링크를 만들지 못했어요. 사진 업로드 상태를 확인한 뒤 다시 시도해 주세요.');
+    }
+    photo_urls[id] = item.signedUrl;
+  }
   return ok(await supabase.from('confirmations').insert({ inspection_id: inspectionId, channel, photo_urls }).select('id,token,channel,status,signer_name,comment,sent_at').single()) as ConfirmationRow;
 }
 
@@ -146,13 +151,13 @@ export const landlordView = async (token: string) => ok(await supabase.rpc('land
 export const landlordRespond = async (token: string, okv: boolean, signer: string, comment?: string) =>
   ok(await supabase.rpc('landlord_respond', { p_token: token, p_ok: okv, p_signer: signer, p_comment: comment ?? null }));
 
-export async function createDefectReport(leaseId: string, r: { category: string; place: string; memo: string; repair: boolean }) {
-  ok(await supabase.from('defect_reports').insert({ lease_id: leaseId, category: r.category, place: r.place, memo: r.memo || null, repair_requested: r.repair }));
+export async function createDefectReport(leaseId: string, r: { category: string; place: string; memo: string; repair: boolean; photoIds: string[] }) {
+  ok(await supabase.from('defect_reports').insert({ lease_id: leaseId, category: r.category, place: r.place, memo: r.memo || null, repair_requested: r.repair, photo_ids: r.photoIds }));
 }
 
-// ponytail: report is marked paid by the client; move this to the payment webhook (service role) when a real PG is wired
-export async function createPaidReport(leaseId: string, type: 'compare' | 'move_out_only', moveInId?: string, moveOutId?: string, diff?: unknown) {
-  ok(await supabase.from('reports').insert({ lease_id: leaseId, type, status: 'paid', move_in_id: moveInId ?? null, move_out_id: moveOutId ?? null, diff: diff ?? null }));
+/** Mock checkout only creates a pending report. A trusted PG webhook must record payment and issue it. */
+export async function createPendingReport(leaseId: string, type: 'compare' | 'move_out_only', moveInId?: string, moveOutId?: string, diff?: unknown) {
+  ok(await supabase.from('reports').insert({ lease_id: leaseId, type, status: 'pending', move_in_id: moveInId ?? null, move_out_id: moveOutId ?? null, diff: diff ?? null }));
 }
 
 // ---------------------------------------------------------------- AI (Edge Function `vision`, OpenAI)

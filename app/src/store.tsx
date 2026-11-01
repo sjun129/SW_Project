@@ -21,7 +21,7 @@ export type Confirm = { status: ConfirmStatus; channel?: string; signer?: string
 export type Lease = { id: string; address: string; start: string; end: string; deposit: string; landlord: string; current: boolean };
 export type Noti = { id: string; icon: 'eye' | 'file-text' | 'alert-triangle' | 'calendar' | 'check-circle'; tone: 'accent' | 'ok' | 'muted' | 'red'; title: string; body: string; time: number; unread: boolean };
 export type Activity = { id: string; title: string; detail?: string; time: number };
-export type DefectReport = { id: string; category: string; place: string; memo: string; repair: boolean; time: number };
+export type DefectReport = { id: string; category: string; place: string; memo: string; repair: boolean; photoIds: string[]; time: number };
 /** demo = in-memory sample data; remote = signed-in user, every write goes to Supabase first. */
 export type Mode = 'demo' | 'remote';
 
@@ -53,6 +53,13 @@ export const uid = () => Math.random().toString(36).slice(2, 10);
 const STAGES: Stage[] = ['in', 'live', 'out'];
 const fromDb = (t: db.DbStage): Stage => (t === 'move_in' ? 'in' : t === 'living' ? 'live' : 'out');
 const won = (n: number | string) => String(n).replace(/[^\d]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',') || '0';
+const checklistFromDiff = (diff: unknown): Record<string, boolean> => {
+  if (!diff || typeof diff !== 'object' || Array.isArray(diff)) return {};
+  const value = (diff as { checklist?: unknown }).checklist;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const allowed = new Set(CHECKLIST.map((item) => item.id));
+  return Object.fromEntries(Object.entries(value).filter(([id, checked]) => allowed.has(id) && typeof checked === 'boolean'));
+};
 
 /** Mock AI tagging (FR-06), keyed by zone name so it works for server zones too. Deterministic so demos repeat. */
 export function mockDetect(zoneName: string, stage: Stage): Defect[] {
@@ -68,20 +75,20 @@ export function mockDetect(zoneName: string, stage: Stage): Defect[] {
 const DEMO_ZONES: Zone[] = db.DEFAULT_ZONES.map(([name, tip], i) => ({ id: ['entry', 'wall', 'floor', 'bath', 'window', 'appliance'][i], name, tip }));
 const t0 = new Date('2026-10-14T15:02:00+09:00').getTime();
 const SEED: [string, string, ImageSourcePropType, string][] = [
-  ['entry', '현관', SAMPLE.floor, '4be1a09c71f2d83e5a0c1b9f6e2d47a8c3b5f1e09d2a6c7b8e4f3a2d1c0b9a73b'],
-  ['wall', '벽지', SAMPLE.wall, '9f2c41ab07de6b3c8a5e1f2d0c9b7a64e3d2c1b0a9f8e7d6c5b4a3928170c81e'],
-  ['floor', '바닥', SAMPLE.floor, '0d7e55c3e9126a4b8c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e25f9b0'],
-  ['bath', '욕실 실리콘', SAMPLE.wall, 'e1aa9f30c4b7d2e6a8f1c3b5d7e9f0a2c4b6d8e0f1a3c5b7d9e2f4a6c8b00c2d'],
+  ['entry', '현관', SAMPLE.floor, '54a88851a8b3b244dedf4387a8733ba74c9d0edd175e486dfa3c2ac290844c8f'],
+  ['wall', '벽지', SAMPLE.wall, 'f75158f215852ad05d0b7e4fa729f8adba59c72514b4d985889e1f5509bf58e2'],
+  ['floor', '바닥', SAMPLE.floor, '54a88851a8b3b244dedf4387a8733ba74c9d0edd175e486dfa3c2ac290844c8f'],
+  ['bath', '욕실 실리콘', SAMPLE.wall, 'f75158f215852ad05d0b7e4fa729f8adba59c72514b4d985889e1f5509bf58e2'],
 ];
 const demoPhotos = (): Photo[] => SEED.map(([zoneId, name, src, hash], i) => ({
   id: uid(), zoneId, stage: 'in', src, sample: true, hash,
-  deviceTs: t0 + 400000 + i * 60000, serverTs: t0 + 400300 + i * 60000, defects: mockDetect(name, 'in'),
+  deviceTs: t0 + 400000 + i * 60000, serverTs: t0 + 400300 + i * 60000, defects: mockDetect(name, 'in'), ai: 'mock',
 }));
 const DEMO_LEASES: Lease[] = [
   { id: 'l1', address: '부산 금정구 장전동 ○○빌 302호', start: '2026-03-01', end: '2027-02-28', deposit: '5,000,000', landlord: '010-1234-5678', current: true },
   { id: 'l0', address: '부산 금정구 부곡동 △△원룸 201호', start: '2025-03-01', end: '2026-02-28', deposit: '3,000,000', landlord: '010-9876-5432', current: false },
 ];
-const DEMO_CHAINS: Record<Stage, string> = { in: 'cc93ba62c04f656ede5f19378eb457bd524e0d16930d8373576b5c5785dc7d76', live: ZERO_HASH, out: ZERO_HASH };
+const DEMO_CHAINS: Record<Stage, string> = { in: '312743ca13342353eacf3aa126cad99f25e0f5e3580d207457468fed6d91db63', live: ZERO_HASH, out: ZERO_HASH };
 const EMPTY_LEASE: Lease = { id: '', address: '등록된 집이 없어요', start: '2026-01-01', end: '2026-01-02', deposit: '0', landlord: '', current: true };
 
 function daysUntil(date: string) {
@@ -118,6 +125,7 @@ function useStoreValue() {
   const [suggestionHidden, setSuggestionHidden] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
+  const checklistLeaseId = useRef<string | null>(null);
 
   const lease = leases.find((l) => l.current) ?? EMPTY_LEASE;
   const remote = mode === 'remote';
@@ -142,7 +150,7 @@ function useStoreValue() {
     setMode('remote');
     if (!s) {
       setLeases([]); setZones([]); setPhotos([]); setChains({ in: ZERO_HASH, live: ZERO_HASH, out: ZERO_HASH }); setInspectionIds({});
-      setConfirm({ status: 'none' }); setDefectReports([]); setPaid({}); setActivity([]); setNotis([]);
+      setConfirm({ status: 'none' }); setDefectReports([]); setPaid({}); setActivity([]); setNotis([]); setChecklist({}); checklistLeaseId.current = null;
       return false;
     }
     const cur = s.leases.find((l) => l.is_current) ?? s.leases[0];
@@ -158,8 +166,13 @@ function useStoreValue() {
     })));
     const c = s.confirmation;
     setConfirm(c ? { status: c.status, channel: c.channel ?? undefined, signer: c.signer_name ?? undefined, comment: c.comment ?? undefined, token: c.token } : { status: 'none' });
-    setDefectReports(s.defectReports.map((r) => ({ id: r.id, category: r.category, place: r.place, memo: r.memo ?? '', repair: r.repair_requested, time: new Date(r.created_at).getTime() })));
+    setDefectReports(s.defectReports.map((r) => ({ id: r.id, category: r.category, place: r.place, memo: r.memo ?? '', repair: r.repair_requested, photoIds: r.photo_ids ?? [], time: new Date(r.created_at).getTime() })));
     setPaid(Object.fromEntries(s.reports.filter((r) => r.status !== 'pending').map((r) => [r.type === 'compare' ? 'compare' : 'only', true])));
+    if (checklistLeaseId.current !== cur.id) {
+      const latestOnlyReport = s.reports.find((r) => r.type === 'move_out_only' && r.status !== 'pending');
+      setChecklist(checklistFromDiff(latestOnlyReport?.diff));
+      checklistLeaseId.current = cur.id;
+    }
     const ev = s.events.map((e) => ({ e, time: new Date(e.created_at).getTime() }));
     setActivity(ev.filter(({ e }) => e.kind === 'activity').map(({ e, time }) => ({ id: e.id, title: e.title, detail: e.body ?? undefined, time })));
     setNotis(ev.filter(({ e }) => e.kind === 'notice').map(({ e, time }) => ({ id: e.id, icon: (e.icon ?? 'check-circle') as Noti['icon'], tone: (e.tone ?? 'accent') as Noti['tone'], title: e.title, body: e.body ?? '', time, unread: !e.read_at })));
@@ -198,8 +211,18 @@ function useStoreValue() {
     return () => { supabase.removeChannel(ch); };
   }, [mode, lease.id]);
   const resetDemo = useCallback(() => {
+    checklistLeaseId.current = null;
     setMode('demo'); setZones(DEMO_ZONES); setPhotos(demoPhotos()); setChains(DEMO_CHAINS); setLeases(DEMO_LEASES); setInspectionIds({});
-    setConfirm({ status: 'none' }); setDefectReports([]); setPaid({});
+    setConfirm({ status: 'none' }); setDefectReports([]); setPaid({}); setChecklist({}); setSuggestionHidden(false); setToast(null);
+    setNotis([
+      { id: 'n1', icon: 'file-text', tone: 'ok', title: '입주 확인서가 준비됐어요', body: '지금 보내거나 나중에 보낼 수 있어요', time: t0 + 600000, unread: true },
+      { id: 'n2', icon: 'calendar', tone: 'muted', title: '계약 만료까지 남은 기간을 알려 드려요', body: '퇴거 30일 전에 다시 알려 드려요', time: t0, unread: false },
+    ]);
+    setActivity([
+      { id: 'a2', title: '바닥 촬영', detail: '하자 1건', time: t0 + 520000 },
+      { id: 'a1', title: '벽지 촬영', detail: '하자 1건', time: t0 + 460000 },
+      { id: 'a0', title: '집 등록', time: t0 },
+    ]);
   }, []);
 
   /** Lock a captured photo: hash the original bytes, then (signed in) upload once and let the server stamp time + extend the chain. */
@@ -235,8 +258,8 @@ function useStoreValue() {
   }, [zones, remote, inspectionIds, chains, log]);
 
   const updateDefects = useCallback(async (photoId: string, defects: Defect[]) => {
-    setPhotos((l) => l.map((p) => (p.id === photoId ? { ...p, defects } : p)));
     if (remote) await db.replaceDefects(photoId, defects);
+    setPhotos((l) => l.map((p) => (p.id === photoId ? { ...p, defects } : p)));
   }, [remote]);
 
   const addZone = useCallback(async (name: string): Promise<Zone> => {
@@ -270,18 +293,19 @@ function useStoreValue() {
   }, [confirm.status, notify]);
 
   const landlordRespond = useCallback(async (okv: boolean, signer: string, comment?: string) => {
+    if (confirm.status !== 'sent' && confirm.status !== 'viewed') throw new Error('먼저 임대인 확인 요청을 보내 주세요.');
     setConfirm((c) => ({ ...c, status: okv ? 'signed' : 'objected', signer, comment }));
     log(okv ? '임대인 확인 완료' : '임대인 이의', okv ? `${signer} 서명 · 기록 잠금` : comment);
     notify(okv
       ? { icon: 'check-circle', tone: 'ok', title: `${signer} 님이 확인했어요`, body: '입주 기록이 잠겨 퇴거 비교의 기준점이 됐어요' }
       : { icon: 'alert-triangle', tone: 'red', title: '임대인이 이의를 남겼어요', body: comment || '항목을 고쳐 다시 보낼 수 있어요' });
-  }, [log, notify]);
+  }, [confirm.status, log, notify]);
 
   const addDefectReport = useCallback(async (r: Omit<DefectReport, 'id' | 'time'>) => {
     if (remote) await db.createDefectReport(lease.id, r);
     setDefectReports((l) => [{ ...r, id: uid(), time: Date.now() }, ...l]);
     log(`${r.place} 하자 신고`, r.category);
-    notify({ icon: 'alert-triangle', tone: 'muted', title: `${r.place} 하자 신고가 저장됐어요`, body: r.repair ? '수리 요청을 함께 보냈어요' : '거주 중 기록으로 남겼어요' });
+    notify({ icon: 'alert-triangle', tone: 'muted', title: `${r.place} 하자 신고가 저장됐어요`, body: r.repair ? '수리 요청 의사도 기록했어요' : '거주 중 기록으로 남겼어요' });
   }, [remote, lease.id, log, notify]);
 
   const addLease = useCallback(async (l: Omit<Lease, 'id' | 'current'>) => {
@@ -300,7 +324,7 @@ function useStoreValue() {
   }, [remote, refresh]);
 
   const pay = useCallback(async (key: 'compare' | 'only') => {
-    if (remote) await db.createPaidReport(lease.id, key === 'compare' ? 'compare' : 'move_out_only', key === 'compare' ? inspectionIds.in : undefined, inspectionIds.out, key === 'only' ? { checklist } : undefined);
+    if (remote) await db.createPendingReport(lease.id, key === 'compare' ? 'compare' : 'move_out_only', key === 'compare' ? inspectionIds.in : undefined, inspectionIds.out, key === 'only' ? { checklist } : undefined);
     setPaid((p) => ({ ...p, [key]: true }));
     log('리포트 결제', '9,900원');
   }, [remote, lease.id, inspectionIds, checklist, log]);
