@@ -14,6 +14,10 @@ export type Photo = {
   hash: string; deviceTs: number; serverTs: number; defects: Defect[];
   /** where the initial tags came from: real model, demo mock, or AI unavailable (user tags by hand) */
   ai?: 'model' | 'mock' | 'none';
+  /** storage path of the original (server mode) */
+  key?: string;
+  /** server's own hash of the stored file vs the device hash (server mode) */
+  seal?: 'match' | 'mismatch' | 'pending';
 };
 export type Zone = { id: string; name: string; tip: string };
 export type ConfirmStatus = 'none' | 'sent' | 'viewed' | 'signed' | 'objected';
@@ -163,6 +167,7 @@ function useStoreValue() {
       id: p.id, zoneId: p.zone_id, stage: stageOf[p.inspection_id], src: p.url ? { uri: p.url } : SAMPLE.wall, sample: false, hash: p.sha256,
       deviceTs: p.device_ts ? new Date(p.device_ts).getTime() : new Date(p.server_ts).getTime(), serverTs: new Date(p.server_ts).getTime(),
       defects: p.defects.map((d) => ({ id: d.id, label: d.label, ...d.bbox, source: d.source, conf: d.confidence ?? undefined })),
+      key: p.storage_key, seal: !p.server_sha256 ? 'pending' : p.server_sha256 === p.sha256 ? 'match' : 'mismatch',
     })));
     const c = s.confirmation;
     setConfirm(c ? { status: c.status, channel: c.channel ?? undefined, signer: c.signer_name ?? undefined, comment: c.comment ?? undefined, token: c.token } : { status: 'none' });
@@ -236,21 +241,23 @@ function useStoreValue() {
     let ai: Photo['ai'] = remote ? 'none' : 'mock';
     let serverTs = deviceTs + 300;
     let chain: string;
+    let key: string | undefined;
+    let seal: Photo['seal'];
     if (remote) {
       const insId = inspectionIds[stage];
       if (!insId) throw new Error('점검 정보를 찾을 수 없어요. 다시 로그인해 주세요.');
-      let key: string;
       ({ serverTs, chain, key } = await db.uploadPhoto({ id, inspectionId: insId, zoneId, bytes, sha256: hash, deviceTs }));
+      seal = await db.sealPhoto(id).then((m) => (m ? 'match' as const : 'mismatch' as const)).catch(() => 'pending' as const);
       // The original is already locked; AI tagging is best-effort and never blocks or fakes the record.
       try {
-        defects = (await db.aiDetect(key, zoneName, STAGE_LABEL[stage])).map((d) => ({ id: uid(), label: d.label, x: d.x, y: d.y, w: d.w, h: d.h, source: 'ai' as const, conf: d.confidence }));
+        defects = (await db.aiDetect(key!, zoneName, STAGE_LABEL[stage])).map((d) => ({ id: uid(), label: d.label, x: d.x, y: d.y, w: d.w, h: d.h, source: 'ai' as const, conf: d.confidence }));
         ai = 'model';
         await db.replaceDefects(id, defects);
       } catch { ai = 'none'; defects = []; } // never show tags the server did not keep
     } else {
       chain = await chainNext(chains[stage], hash);
     }
-    const p: Photo = { id, zoneId, stage, src, sample: !uri, hash, deviceTs, serverTs, defects, ai };
+    const p: Photo = { id, zoneId, stage, src, sample: !uri, hash, deviceTs, serverTs, defects, ai, key, seal };
     setPhotos((l) => [...l, p]);
     setChains((c) => ({ ...c, [stage]: chain }));
     log(`${zoneName} 촬영`, defects.length ? `하자 ${defects.length}건` : STAGE_LABEL[stage]);

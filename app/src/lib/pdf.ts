@@ -19,7 +19,7 @@ export async function imgSrc(src: ImageSourcePropType, read: (src: ImageSourcePr
 }
 
 export type PdfPhoto = { zone: string; stage: string; img: string | null; hash: string; serverTs: string; defects: string[]; note?: string };
-export type PdfDoc = { title: string; docNo: string; meta: [string, string][]; photos: PdfPhoto[]; checklist?: [string, string][]; body?: string; footer?: string; showPhotos?: boolean };
+export type PdfDoc = { title: string; docNo: string; meta: [string, string][]; photos: PdfPhoto[]; checklist?: [string, string][]; checklistTitle?: string; body?: string; footer?: string; showPhotos?: boolean };
 
 export function renderHtml(d: PdfDoc) {
   const rows = d.photos.map((p) => `
@@ -33,7 +33,7 @@ export function renderHtml(d: PdfDoc) {
       </div>
     </div>`).join('');
   const checklist = d.checklist?.length
-    ? `<h2>통상 손모 체크리스트</h2><table>${d.checklist.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}</table>` : '';
+    ? `<h2>${esc(d.checklistTitle ?? '통상 손모 체크리스트')}</h2><table>${d.checklist.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}</table>` : '';
   return `<!doctype html><html><head><meta charset="utf-8"/><style>
     body{font-family:-apple-system,'Noto Sans KR','Apple SD Gothic Neo',sans-serif;color:#1F2633;padding:28px;font-size:12px}
     h1{font-size:22px;margin:4px 0 14px} h2{font-size:14px;margin:20px 0 8px}

@@ -1,4 +1,5 @@
 import { CHECKLIST, CONFIRM_LABEL, fmtTime, photoBytes, STAGE_LABEL, type Confirm, type Lease, type Photo, type Stage, type Zone } from '../store';
+import { compareZone } from './db';
 import { imgSrc, type PdfDoc, type PdfPhoto } from './pdf';
 
 type Data = { lease: Lease; zones: Zone[]; photos: Photo[]; chains: Record<Stage, string>; confirm: Confirm; checklist: Record<string, boolean> };
@@ -49,10 +50,22 @@ export async function buildReport(d: Data, key: 'compare' | 'only'): Promise<Pdf
       photos: await rows(d, ['out']),
     };
   }
+  // Same (cached) model result as the compare screen, so the paid report and the screen agree.
+  const aiRows: [string, string][] = [];
+  let aiOk = true;
+  for (const z of d.zones) {
+    const a = d.photos.filter((p) => p.zoneId === z.id && p.stage === 'in').at(-1)?.key;
+    const b = d.photos.filter((p) => p.zoneId === z.id && p.stage === 'out').at(-1)?.key;
+    if (!a || !b) continue;
+    try {
+      for (const c of await compareZone(a, b, z.name)) aiRows.push([`${z.name} · ${c.label}`, `${c.category} (참고) · ${c.reason}`]);
+    } catch { aiOk = false; }
+  }
   return {
     title: '퇴거 비교 리포트', docNo: docNo('JSC', d.lease),
     meta: [...base, ['입주 chain_hash', d.chains.in], ['퇴거 chain_hash', d.chains.out], ['임대인 확인', CONFIRM_LABEL[d.confirm.status]]],
+    checklistTitle: 'AI 전후 비교 (참고용)', checklist: aiRows,
     photos: await rows(d, ['in', 'out'], true),
-    footer: '퇴거 사진에는 입주 기록에 없던 항목만 표시했습니다.',
+    footer: `퇴거 사진에는 입주 기록에 없던 항목만 표시했습니다.${aiOk ? '' : ' 일부 구역은 AI 비교에 실패해 태그 대조 결과만 담았습니다.'} AI 분류는 참고용이며 법률 자문이 아닙니다.`,
   };
 }

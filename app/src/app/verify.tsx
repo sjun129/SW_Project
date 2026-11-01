@@ -61,7 +61,7 @@ export default function Verify() {
           <Row gap={8}><Icon name="check-circle" size={18} color={C.ok} /><T size={15} w="b" color={C.ok}>등록된 원본이에요</T></Row>
           <T size={13}>{mode === 'remote' ? '서버 등록' : '데모 기록'} {new Date(res.server_ts).toLocaleString('ko-KR')} · {res.zone} · {STAGE_KO[res.stage]}</T>
           <T size={12.5} color={C.muted}>{mode === 'remote'
-            ? (res.confirmed ? '임대인 확인까지 완료된 기록이에요.' : '임대인 확인은 아직 없는 기록이에요.')
+            ? `${res.server_verified ? '서버가 파일에서 직접 계산한 해시와 일치해요. ' : '서버 해시 대조는 아직 끝나지 않았어요. '}${res.confirmed ? '임대인 확인까지 완료된 기록이에요.' : '임대인 확인은 아직 없는 기록이에요.'}`
             : '현재 데모 실행 중의 메모리 기록에서 해시를 찾았어요. 서버에 저장되거나 검증된 결과는 아니에요.'}</T>
         </Card>
       ) : (
