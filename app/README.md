@@ -1,4 +1,4 @@
-# 자취실록 앱 (Expo SDK 57)
+# 자취실록 앱 (Expo SDK 58)
 
 세입자가 입주·거주·퇴거 시점의 방 상태를 위변조할 수 없는 기록으로 남기고, 임대인 확인과 퇴거 비교 리포트까지 이어 주는 앱입니다. 디자인은 Figma "v2 · 자유 탐색 구조" 섹션(`../design-refs/`)을 따릅니다.
 
@@ -23,7 +23,7 @@ npm install
 npx expo start
 ```
 
-- **휴대폰**: 스토어의 Expo Go(SDK 57 지원 버전, 예: 57.0.9)로 터미널의 QR 코드를 찍습니다.
+- **휴대폰**: 스토어의 Expo Go(SDK 58 지원 버전)로 터미널의 QR 코드를 찍습니다. 업그레이드 후 첫 실행은 `npx expo start --clear`를 사용합니다. 실제 Android 기기 테스트 항목과 검증 결과는 [마이그레이션 보고서](../EXPO_SDK_58_MIGRATION_REPORT.md)를 참고하세요.
 - **웹**: `npx expo start --web`으로 실행하거나, `npx expo export --platform web`으로 빌드한 뒤 `dist/`를 정적 서버로 엽니다.
 - `.env.local`을 바꾼 뒤에는 `npx expo start --clear`로 다시 시작해야 값이 반영됩니다.
 
@@ -213,7 +213,7 @@ npx -y deno@2 check --config ../supabase/functions/vision/deno.json ../supabase/
 
 | 증상 | 원인과 해결 |
 |---|---|
-| Expo Go에서 "Project is incompatible" | Expo Go가 SDK 57을 지원하는 버전인지 확인합니다. |
+| Expo Go에서 "Project is incompatible" | Expo Go가 SDK 58을 지원하는 버전인지 확인합니다. |
 | 로그인 버튼이 비활성화됨 | `.env.local`이 없거나 값이 비어 있습니다. 넣은 뒤 `npx expo start --clear`로 다시 시작합니다. |
 | 태깅 화면에 "AI 분석을 쓸 수 없어서…" | `vision` 함수가 배포되지 않았거나 `OPENAI_API_KEY` 시크릿이 없습니다. |
 | 임대인이 응답해도 배너가 뜨지 않음 | `20261023000000_realtime_events.sql`을 실행했는지 확인합니다. 앱이 서버 모드로 열려 있어야 배너가 뜹니다. |

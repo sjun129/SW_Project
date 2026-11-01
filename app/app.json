@@ -18,6 +18,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
+      "output": "single",
       "favicon": "./assets/icon.png"
     },
     "plugins": [
