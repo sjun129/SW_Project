@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 
 /** Server-side stage names (inspections.type). */
@@ -8,7 +9,7 @@ export type LeaseRow = { id: string; address: string; start_date: string; end_da
 export type ZoneRow = { id: string; name: string; tip: string | null; sort: number };
 export type InspectionRow = { id: string; type: DbStage; chain_hash: string };
 export type DefectRow = { id: string; photo_id: string; label: string; bbox: { x: number; y: number; w: number; h: number }; source: 'ai' | 'user'; confidence: number | null };
-export type PhotoRow = { id: string; inspection_id: string; zone_id: string; storage_key: string; sha256: string; prev_hash: string; device_ts: string | null; server_ts: string; defects: DefectRow[] };
+export type PhotoRow = { id: string; inspection_id: string; zone_id: string; storage_key: string; sha256: string; server_sha256: string | null; prev_hash: string; device_ts: string | null; server_ts: string; defects: DefectRow[] };
 export type ConfirmationRow = { id: string; token: string; channel: string | null; status: 'sent' | 'viewed' | 'signed' | 'objected'; signer_name: string | null; comment: string | null; sent_at: string };
 export type DefectReportRow = { id: string; category: string; place: string; memo: string | null; repair_requested: boolean; photo_ids: string[]; created_at: string };
 export type ReportRow = { id: string; type: 'compare' | 'move_out_only'; status: 'pending' | 'paid' | 'issued'; diff: unknown; created_at: string };
@@ -54,7 +55,7 @@ export async function loadSnapshot(): Promise<Snapshot | null> {
   const zones = ok(z) as ZoneRow[], inspections = ok(ins) as InspectionRow[], defectReports = ok(dr) as DefectReportRow[], reports = ok(rp) as ReportRow[], events = ok(ev) as EventRow[];
   const insIds = inspections.map((i) => i.id);
   const photos = insIds.length
-    ? ok(await supabase.from('photos').select('id,inspection_id,zone_id,storage_key,sha256,prev_hash,device_ts,server_ts,defects(id,photo_id,label,bbox,source,confidence)').in('inspection_id', insIds).order('server_ts')) as PhotoRow[]
+    ? ok(await supabase.from('photos').select('id,inspection_id,zone_id,storage_key,sha256,server_sha256,prev_hash,device_ts,server_ts,defects(id,photo_id,label,bbox,source,confidence)').in('inspection_id', insIds).order('server_ts')) as PhotoRow[]
     : [];
   const signed = photos.length ? ok(await supabase.storage.from('originals').createSignedUrls(photos.map((p) => p.storage_key), 60 * 60)) : [];
   const moveIn = inspections.find((i) => i.type === 'move_in');
@@ -133,7 +134,7 @@ export type LandlordPhoto = { id: string; zone: string; url: string | null; serv
 /** preview = the signed-in tenant opened their own link: read-only, not counted as a landlord view. */
 export type LandlordData = { address: string; status: 'sent' | 'viewed' | 'signed' | 'objected'; signer: string | null; expires_at: string; preview?: boolean; photos: LandlordPhoto[] };
 
-export type VerifyResult = { found: false } | { found: true; server_ts: string; zone: string; stage: DbStage; confirmed: boolean };
+export type VerifyResult = { found: false } | { found: true; server_ts: string; zone: string; stage: DbStage; confirmed: boolean; server_verified?: boolean };
 export const verifyHash = async (sha: string) => ok(await supabase.rpc('verify_hash', { p_sha256: sha })) as VerifyResult;
 
 export async function addEvent(leaseId: string, e: { id?: string; kind: 'activity' | 'notice'; icon?: string; tone?: string; title: string; body?: string }) {
@@ -176,6 +177,20 @@ async function vision<T>(body: Record<string, unknown>): Promise<T> {
 /** FR-06: vision tagging of an uploaded original. Throws when the function is not deployed or the model fails. */
 export const aiDetect = async (storageKeyPath: string, zone: string, stage: string) =>
   (await vision<{ defects: AiDefect[] }>({ task: 'defects', storage_key: storageKeyPath, zone, stage })).defects;
+
+/** FR-05: the server hashes the stored file itself; `match` compares it with the device hash. */
+export const sealPhoto = async (photoId: string) => (await vision<{ match: boolean }>({ task: 'seal', photo_id: photoId })).match;
+
+export type ZoneChange = AiDefect & { category: '통상 손모 가능성' | '임차인 과실 의심' | '판단 어려움'; reason: string };
+/** FR-15/16: model comparison of a move-in/move-out pair. Originals never change, so each pair is only analysed (and billed) once per device. */
+export async function compareZone(beforeKey: string, afterKey: string, zone: string): Promise<ZoneChange[]> {
+  const cacheKey = `compare.${beforeKey}.${afterKey}`;
+  const hit = await AsyncStorage.getItem(cacheKey).catch(() => null);
+  if (hit) return JSON.parse(hit) as ZoneChange[];
+  const { changes } = await vision<{ changes: ZoneChange[] }>({ task: 'compare', before_key: beforeKey, after_key: afterKey, zone });
+  AsyncStorage.setItem(cacheKey, JSON.stringify(changes)).catch(() => {});
+  return changes;
+}
 
 export type LeaseGuess = { address: string; start_date: string; end_date: string; deposit: number; landlord_phone: string };
 /** Reads a lease contract photo (base64 data URL) into form values. */

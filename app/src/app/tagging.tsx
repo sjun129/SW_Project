@@ -58,10 +58,10 @@ export default function Tagging() {
           </Row>
         ))}
       </View>
-      <Row gap={10} style={{ backgroundColor: C.okSoft, borderRadius: 14, padding: 12 }}>
-        <Icon name="lock" size={18} color={C.ok} />
+      <Row gap={10} style={{ backgroundColor: photo.seal === 'mismatch' ? C.redSoft : C.okSoft, borderRadius: 14, padding: 12 }}>
+        <Icon name={photo.seal === 'mismatch' ? 'alert-triangle' : 'lock'} size={18} color={photo.seal === 'mismatch' ? C.red : C.ok} />
         <View style={{ flex: 1 }}>
-          <T size={13} w="b" color={C.ok}>{mode === 'remote' ? '원본 고정 완료 · 서버 해시 저장' : '데모 기록 · 이 기기에만 저장'}</T>
+          <T size={13} w="b" color={photo.seal === 'mismatch' ? C.red : C.ok}>{mode !== 'remote' ? '데모 기록 · 이 기기에만 저장' : photo.seal === 'match' ? '원본 고정 완료 · 서버 해시 일치' : photo.seal === 'mismatch' ? '서버 해시 불일치 · 전송 중 손상됐을 수 있으니 다시 찍어 주세요' : '원본 저장 완료 · 서버 해시 확인 대기'}</T>
           <T size={11.5} w="mono" color={C.ok}>{short(photo.hash)} · {fmtTime(photo.serverTs)}</T>
         </View>
       </Row>

@@ -1,4 +1,4 @@
-// 자취실록 vision function (FR-06 AI 하자 태깅, 계약서 자동 채우기)
+// 자취실록 vision function (FR-05 서버 해시, FR-06 AI 하자 태깅, FR-15·16 전후 비교, 계약서 자동 채우기)
 // Deploy:  npx supabase functions deploy vision --project-ref <project-ref>
 // Secret:  OPENAI_API_KEY (Dashboard → Edge Functions → Secrets). Optional OPENAI_MODEL.
 import { withSupabase } from "npm:@supabase/server@1";
@@ -65,8 +65,36 @@ const LEASE_SCHEMA = {
   },
 };
 
+const CATEGORIES = ["통상 손모 가능성", "임차인 과실 의심", "판단 어려움"];
+const COMPARE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["changes"],
+  properties: {
+    changes: {
+      type: "array",
+      maxItems: 8,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["label", "x", "y", "w", "h", "confidence", "category", "reason"],
+        properties: {
+          label: { type: "string", enum: DEFECT_LABELS },
+          x: box,
+          y: box,
+          w: box,
+          h: box,
+          confidence: { type: "integer", minimum: 0, maximum: 100 },
+          category: { type: "string", enum: CATEGORIES },
+          reason: { type: "string" },
+        },
+      },
+    },
+  },
+};
+
 async function ask(
-  image: string,
+  images: string[],
   prompt: string,
   name: string,
   schema: object,
@@ -83,11 +111,14 @@ async function ask(
       model: MODEL,
       input: [{
         role: "user",
-        content: [{ type: "input_text", text: prompt }, {
-          type: "input_image",
-          image_url: image,
-          detail: "high",
-        }],
+        content: [
+          { type: "input_text", text: prompt },
+          ...images.map((image_url) => ({
+            type: "input_image",
+            image_url,
+            detail: "high",
+          })),
+        ],
       }],
       text: { format: { type: "json_schema", name, schema, strict: true } },
     }),
@@ -113,6 +144,15 @@ const DEFECT_PROMPT = (zone: string, stage: string) =>
 - 확신도(confidence)는 0~100. 확실하지 않으면 넣지 마세요.
 - 하자가 없으면 빈 배열을 주세요.
 이 결과는 참고용 표시이며 법률 판단이 아니에요.`;
+
+const COMPARE_PROMPT = (zone: string) =>
+  `한국 원룸·오피스텔 "${zone}"의 같은 구역 사진 2장이에요. 첫 번째가 입주, 두 번째가 퇴거 사진이에요.
+입주 사진에 없다가 퇴거 사진에 새로 생긴 하자만 찾아 주세요: ${DEFECT_LABELS.join(", ")}.
+- 입주 때부터 있던 하자, 구도·조명·그림자 차이는 변화가 아니에요.
+- 위치는 퇴거 사진 전체를 0~1로 본 좌상단 기준 박스(x, y, w, h)로 주세요.
+- category: 일상적인 사용으로 생길 수 있으면 "통상 손모 가능성", 부주의나 사고로 보이면 "임차인 과실 의심", 사진만으로 알 수 없으면 "판단 어려움".
+- reason: 그렇게 본 이유를 한 문장으로. 법률 판단을 단정하지 마세요.
+- 확신도(confidence)는 0~100. 새로 생긴 하자가 없으면 빈 배열을 주세요.`;
 
 const LEASE_PROMPT =
   `한국 주택 임대차 계약서 사진이에요. 다음 값을 계약서에 적힌 그대로 읽어 주세요.
@@ -140,12 +180,55 @@ const handler = withSupabase({ auth: "user" }, async (req, ctx) => {
         return json({ error: error?.message ?? "photo not found" }, 404);
       }
       const res = await ask(
-        data.signedUrl,
+        [data.signedUrl],
         DEFECT_PROMPT(String(body.zone ?? "방"), String(body.stage ?? "입주")),
         "defects",
         DEFECT_SCHEMA,
       );
       return json({ defects: res.defects, model: MODEL });
+    }
+    if (body?.task === "seal") {
+      // RLS on the caller's client limits this to their own photos. The bucket is immutable,
+      // so hashing later still reads the bytes that were first uploaded.
+      const { data: p } = await ctx.supabase.from("photos")
+        .select("id,storage_key,sha256").eq("id", String(body.photo_id ?? ""))
+        .maybeSingle();
+      if (!p) return json({ error: "photo not found" }, 404);
+      const { data: file, error } = await ctx.supabase.storage.from("originals")
+        .download(p.storage_key);
+      if (error || !file) {
+        return json({ error: error?.message ?? "file not found" }, 404);
+      }
+      const digest = await crypto.subtle.digest(
+        "SHA-256",
+        await file.arrayBuffer(),
+      );
+      const server_sha256 = Array.from(new Uint8Array(digest))
+        .map((b) => b.toString(16).padStart(2, "0")).join("");
+      const { error: saveError } = await ctx.supabaseAdmin.from("photos")
+        .update({ server_sha256, server_hash_at: new Date().toISOString() })
+        .eq("id", p.id).is("server_sha256", null);
+      if (saveError) return json({ error: saveError.message }, 500);
+      return json({ server_sha256, match: server_sha256 === p.sha256 });
+    }
+    if (body?.task === "compare") {
+      const keys = [String(body.before_key ?? ""), String(body.after_key ?? "")];
+      if (!keys.every((k) => k.startsWith(`${userId}/`))) {
+        return json({ error: "not your photo" }, 403);
+      }
+      const { data, error } = await ctx.supabase.storage.from("originals")
+        .createSignedUrls(keys, 300);
+      const urls = (data ?? []).map((d) => d.signedUrl).filter(Boolean);
+      if (error || urls.length !== 2) {
+        return json({ error: error?.message ?? "photo not found" }, 404);
+      }
+      const res = await ask(
+        urls as string[],
+        COMPARE_PROMPT(String(body.zone ?? "방")),
+        "compare",
+        COMPARE_SCHEMA,
+      );
+      return json({ changes: res.changes, model: MODEL });
     }
     if (body?.task === "lease") {
       const image = String(body.image ?? "");
@@ -156,7 +239,7 @@ const handler = withSupabase({ auth: "user" }, async (req, ctx) => {
         return json({ error: "image too large" }, 413);
       }
       return json({
-        lease: await ask(image, LEASE_PROMPT, "lease", LEASE_SCHEMA),
+        lease: await ask([image], LEASE_PROMPT, "lease", LEASE_SCHEMA),
         model: MODEL,
       });
     }
