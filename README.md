@@ -24,7 +24,7 @@
 └──────────────────────┘      └───────────────────────────────────────┘
 ```
 
-- 앱: Expo SDK 57, React Native 0.86, expo-router, TypeScript
+- 앱: Expo SDK 58, React Native 0.88, expo-router, TypeScript
 - 백엔드: Supabase (Postgres, Storage, Auth, Realtime, Edge Functions)
 - AI: OpenAI Responses API (하자 태깅, 계약서 읽기). API 키는 Supabase 시크릿에만 둡니다.
 
@@ -49,7 +49,7 @@ npm install
 npx expo start
 ```
 
-휴대폰의 Expo Go(SDK 57 지원 버전)로 터미널에 뜨는 QR 코드를 찍으면 실행됩니다. 서버 설정 없이도 로그인 화면의 "로그인 없이 둘러보기"로 데모 데이터를 써 볼 수 있습니다. 실제 계정과 서버 저장을 쓰려면 [app/README.md의 Supabase 설정](app/README.md#supabase-설정)을 따라 주세요.
+휴대폰의 Expo Go(SDK 58 지원 버전)로 터미널에 뜨는 QR 코드를 찍어 실행합니다. 마이그레이션 후에는 `npx expo start --clear`로 시작하세요. 서버 설정 없이도 로그인 화면의 "로그인 없이 둘러보기"로 데모 데이터를 써 볼 수 있습니다. 실제 계정과 서버 저장을 쓰려면 [app/README.md의 Supabase 설정](app/README.md#supabase-설정)을 따라 주세요.
 
 ## 현재 한계
 
