@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { compareZone, type ZoneChange } from '@/lib/db';
 import { errText, SAMPLE, useStore, type Defect } from '@/store';
 import { C } from '@/theme';
@@ -69,7 +69,7 @@ export default function Compare() {
       footer={<Footer><Btn label={paid.compare ? '발급된 리포트 보기' : '비교 리포트 받기 · 9,900원'} onPress={() => router.push('/payment?key=compare')} /></Footer>}>
       <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 }}>
         <Mascot name="search" size={52} />
-        <View style={{ flex: 1 }}><T size={15} w="b">{waiting ? 'AI가 입주·퇴거 사진을 비교하는 중…' : `${changed.length}개 구역에서 변화가 보여요`}</T><T size={12.5} color={C.muted}>{mode === 'remote' ? 'AI가 두 사진을 함께 보고 새로 생긴 부분을 찾아요' : '입주 사진과 나란히 놓고 비교했어요'}</T></View>
+        <View style={{ flex: 1 }}><T size={15} w="b">{waiting ? 'AI가 입주·퇴거 사진을 비교하는 중…' : `${changed.length}개 구역에서 변화가 보여요`}</T><T size={12.5} color={C.muted}>{mode === 'remote' ? 'AI가 두 사진을 함께 보고 새로 생긴 부분을 찾아요' : '데모 모드예요. 실제 분석이 아닌 예시 결과를 보여 줘요'}</T></View>
       </Card>
       {changes.map(({ z, a, b, diff, model, failed, waiting: w }) => {
         const top = model?.[0];
@@ -80,7 +80,7 @@ export default function Compare() {
           <Card key={z.id} style={{ gap: 10, padding: 14 }}>
             <Row style={{ justifyContent: 'space-between' }}><T size={15} w="b">{z.name}</T>{w ? <ActivityIndicator color={C.accent} /> : c ? <Pill label={c.label} tone={c.tone} /> : <Pill label="변화 없음" tone="ok" />}</Row>
             <Row gap={6}>
-              <View style={{ flex: 1 }}><Image source={a!.src} style={{ height: 120, borderRadius: 12, width: '100%' }} /><Tag t="입주" /></View>
+              <View style={{ flex: 1 }}><TaggedPhoto src={a!.src} defects={[]} height={120} radius={12} /><Tag t="입주" /></View>
               <View style={{ flex: 1 }}><TaggedPhoto src={b!.src} defects={diff} height={120} radius={12} diff /><Tag t="퇴거" /></View>
             </Row>
             {model?.map((m, i) => <T key={i} size={12.5} color={C.muted}>{m.label} ({m.category}) · {m.reason}</T>)}

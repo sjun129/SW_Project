@@ -169,7 +169,7 @@ async function vision<T>(body: Record<string, unknown>): Promise<T> {
   if (error) {
     // FunctionsHttpError carries the JSON body the function returned
     const detail = await (error as { context?: Response }).context?.json?.().catch(() => null);
-    throw new Error(detail?.error ?? error.message);
+    throw new Error(detail?.error ?? detail?.message ?? error.message);
   }
   return data as T;
 }

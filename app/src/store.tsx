@@ -14,6 +14,8 @@ export type Photo = {
   hash: string; deviceTs: number; serverTs: number; defects: Defect[];
   /** where the initial tags came from: real model, demo mock, or AI unavailable (user tags by hand) */
   ai?: 'model' | 'mock' | 'none';
+  /** why tagging failed on this device, shown on the tagging screen */
+  aiError?: string;
   /** storage path of the original (server mode) */
   key?: string;
   /** server's own hash of the stored file vs the device hash (server mode) */
@@ -239,6 +241,7 @@ function useStoreValue() {
     const id = remote ? Crypto.randomUUID() : uid();
     let defects = remote ? [] : mockDetect(zoneName, stage);
     let ai: Photo['ai'] = remote ? 'none' : 'mock';
+    let aiError: string | undefined;
     let serverTs = deviceTs + 300;
     let chain: string;
     let key: string | undefined;
@@ -253,11 +256,11 @@ function useStoreValue() {
         defects = (await db.aiDetect(key!, zoneName, STAGE_LABEL[stage])).map((d) => ({ id: uid(), label: d.label, x: d.x, y: d.y, w: d.w, h: d.h, source: 'ai' as const, conf: d.confidence }));
         ai = 'model';
         await db.replaceDefects(id, defects);
-      } catch { ai = 'none'; defects = []; } // never show tags the server did not keep
+      } catch (e) { ai = 'none'; defects = []; aiError = errText(e); } // never show tags the server did not keep
     } else {
       chain = await chainNext(chains[stage], hash);
     }
-    const p: Photo = { id, zoneId, stage, src, sample: !uri, hash, deviceTs, serverTs, defects, ai, key, seal };
+    const p: Photo = { id, zoneId, stage, src, sample: !uri, hash, deviceTs, serverTs, defects, ai, aiError, key, seal };
     setPhotos((l) => [...l, p]);
     setChains((c) => ({ ...c, [stage]: chain }));
     log(`${zoneName} 촬영`, defects.length ? `하자 ${defects.length}건` : STAGE_LABEL[stage]);

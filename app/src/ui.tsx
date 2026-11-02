@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState, type ComponentProps, type ReactNode } from 'react';
+import { useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Defect } from './store';
@@ -109,28 +109,48 @@ export function Sheet({ children }: { children: ReactNode }) {
 }
 
 /** Photo with defect boxes. onPressAt gives the relative (0..1) tap position for adding a user tag. */
-export function TaggedPhoto({ src, defects, height = 260, radius = 16, onPressAt, diff }: { src: ImageSourcePropType; defects: Defect[]; height?: number; radius?: number; onPressAt?: (x: number, y: number) => void; diff?: boolean }) {
+export function TaggedPhoto({ src, defects, height = 260, radius = 16, onPressAt, diff, aiLabel = 'AI' }: { src: ImageSourcePropType; defects: Defect[]; height?: number; radius?: number; onPressAt?: (x: number, y: number) => void; diff?: boolean; aiLabel?: string }) {
   const [width, setWidth] = useState(1);
+  const [loaded, setLoaded] = useState<{ uri?: string; aspect: number } | null>(null);
+  const img = src as { uri?: string; width?: number; height?: number };
+  // Bundled images know their size; camera files and signed URLs are measured (onLoad covers native require ids).
+  const aspect = img.width && img.height ? img.width / img.height : loaded && loaded.uri === img.uri ? loaded.aspect : 0;
+  useEffect(() => {
+    if (!img.uri || img.width) return;
+    let live = true;
+    Image.getSize(img.uri, (w, h) => { if (live && h) setLoaded({ uri: img.uri, aspect: w / h }); }, () => {});
+    return () => { live = false; };
+  }, [img.uri, img.width]);
+  // Tag coordinates are fractions of the whole photo, so show the whole photo: the frame below is the fitted image, not the outer box.
+  const frameW = aspect ? Math.min(width, height * aspect) : width;
+  const frameH = aspect ? frameW / aspect : height;
+  const offX = (width - frameW) / 2, offY = (height - frameH) / 2;
+  const clamp = (n: number) => Math.min(1, Math.max(0, n));
   return (
     <Pressable disabled={!onPressAt} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       onPress={(e) => {
         // react-native-web leaves locationX undefined on some targets; fall back to the DOM offset
         const ne = e.nativeEvent as unknown as { locationX?: number; locationY?: number; offsetX?: number; offsetY?: number };
         const x = ne.locationX ?? ne.offsetX ?? 0, y = ne.locationY ?? ne.offsetY ?? 0;
-        onPressAt?.(Math.min(1, x / width), Math.min(1, y / height));
+        onPressAt?.(clamp((x - offX) / frameW), clamp((y - offY) / frameH));
       }}
       style={{ height, borderRadius: radius, overflow: 'hidden', backgroundColor: C.photo }}>
-      <Image source={src} style={StyleSheet.absoluteFill} resizeMode="cover" />
-      {defects.map((d) => {
+      <View pointerEvents="none" style={width > 1 ? { position: 'absolute', left: offX, top: offY, width: frameW, height: frameH } : StyleSheet.absoluteFill}>
+      <Image source={src} style={{ width: '100%', height: '100%' }} resizeMode="cover" onLoad={(e) => {
+        const n = (e.nativeEvent as unknown as { source?: { width?: number; height?: number } }).source;
+        if (n?.width && n?.height) setLoaded({ uri: img.uri, aspect: n.width / n.height });
+      }} />
+      {!!aspect && width > 1 && defects.map((d) => {
         const color = diff ? C.red : d.source === 'user' ? '#4FC3FF' : C.tag;
         return (
           <View key={d.id} pointerEvents="none" style={{ position: 'absolute', left: `${d.x * 100}%`, top: `${d.y * 100}%`, width: `${d.w * 100}%`, height: `${d.h * 100}%`, borderWidth: 2.5, borderColor: color, borderRadius: 6, backgroundColor: diff ? 'rgba(195,59,73,0.18)' : undefined }}>
-            <View style={{ position: 'absolute', top: -22, left: -2, backgroundColor: color, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 1 }}>
-              <T size={11} w="b" color={diff ? '#fff' : C.ink}>{diff ? '변화' : d.label + (d.conf ? ` · AI ${d.conf}%` : '')}</T>
+            <View style={{ position: 'absolute', top: d.y * frameH + offY < 24 ? 0 : -22, ...(d.x > 0.55 ? { right: -2 } : { left: -2 }), minWidth: !diff && d.conf ? 118 : undefined, backgroundColor: color, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 1 }}>
+              <T size={11} w="b" lines={1} color={diff ? '#fff' : C.ink}>{diff ? '변화' : d.label + (d.conf ? ` · ${aiLabel} ${d.conf}%` : '')}</T>
             </View>
           </View>
         );
       })}
+      </View>
     </Pressable>
   );
 }

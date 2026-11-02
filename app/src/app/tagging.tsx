@@ -9,8 +9,18 @@ import { Btn, Chip, Footer, Header, Icon, Legal, Row, Screen, T, TaggedPhoto } f
 const LABELS = ['곰팡이', '찢김', '스크래치', '얼룩', '파손', '들뜸', '누수 흔적'];
 const AI_NOTE = {
   model: 'AI가 찾은 하자를 확인하세요. 틀린 건 지우고, 빠진 곳은 라벨을 고른 뒤 사진을 눌러 추가할 수 있어요.',
-  mock: '데모 모드라 예시 AI 결과를 보여 줘요. 라벨을 고른 뒤 사진을 눌러 직접 추가할 수도 있어요.',
+  mock: '데모 모드예요. 사진을 실제로 분석하지 않고 구역별로 정해 둔 예시를 보여 줘요. 실제 AI 판단은 로그인하면 쓸 수 있어요.',
   none: 'AI 분석을 쓸 수 없어서 하자를 표시하지 못했어요. 원본은 안전하게 고정됐으니, 라벨을 고른 뒤 사진을 눌러 직접 표시해 주세요.',
+};
+
+/** Turns the raw failure into something the user (or whoever runs the server) can act on. */
+const aiCause = (msg: string) => {
+  if (/OPENAI_API_KEY/.test(msg)) return '서버에 OpenAI API 키가 설정되지 않았어요.';
+  if (/OpenAI 401/.test(msg)) return 'OpenAI API 키가 올바르지 않아요.';
+  if (/OpenAI 429/.test(msg)) return 'OpenAI 사용 한도를 넘었거나 크레딧이 부족해요.';
+  if (/OpenAI 404/.test(msg)) return '설정된 AI 모델을 찾을 수 없어요.';
+  if (/Failed to send|Requested function was not found|non-2xx/i.test(msg)) return 'AI 서버 함수에 연결하지 못했어요. 배포 상태를 확인해 주세요.';
+  return msg;
 };
 
 export default function Tagging() {
@@ -43,8 +53,11 @@ export default function Tagging() {
         <Btn kind="ghost" label="다른 구역 찍기" onPress={() => router.replace({ pathname: '/camera', params: { stage: photo.stage, zone: nextZone?.id ?? photo.zoneId } })} />
         <Btn label="저장" onPress={() => (router.canGoBack() ? router.back() : router.replace('/records'))} />
       </Footer>}>
-      <TaggedPhoto src={photo.src} defects={photo.defects} height={268} onPressAt={addAt} />
-      <T size={12.5} color={photo.ai === 'none' ? C.red : C.muted}>{AI_NOTE[photo.ai ?? 'model']}</T>
+      <TaggedPhoto src={photo.src} defects={photo.defects} height={268} onPressAt={addAt} aiLabel={photo.ai === 'mock' ? '예시' : 'AI'} />
+      <View style={photo.ai === 'mock' ? { backgroundColor: C.soft, borderRadius: 12, padding: 12 } : undefined}>
+        <T size={12.5} w={photo.ai === 'mock' ? 'm' : undefined} color={photo.ai === 'none' ? C.red : photo.ai === 'mock' ? C.accent : C.muted}>{AI_NOTE[photo.ai ?? 'model']}</T>
+        {!!photo.aiError && <T size={12} color={C.red}>원인: {aiCause(photo.aiError)}</T>}
+      </View>
       {!!err && <T size={12.5} color={C.red}>{err}</T>}
       <Row gap={6} style={{ flexWrap: 'wrap' }}>{LABELS.map((l) => <Chip key={l} label={l} on={l === label} onPress={() => setLabel(l)} />)}</Row>
       <View style={{ backgroundColor: C.surface, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 4 }}>
@@ -53,7 +66,7 @@ export default function Tagging() {
           <Row key={d.id} gap={8} style={{ paddingVertical: 12 }}>
             <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: d.source === 'user' ? '#4FC3FF' : C.tag }} />
             <T size={14} w="m" style={{ flex: 1 }}>{d.label}</T>
-            <T size={12} color={C.muted}>{d.source === 'ai' ? `AI ${d.conf}%` : '직접 추가'}</T>
+            <T size={12} color={C.muted}>{d.source === 'ai' ? `${photo.ai === 'mock' ? '예시' : 'AI'} ${d.conf}%` : '직접 추가'}</T>
             <Pressable hitSlop={8} onPress={() => remove(d.id)}><T size={12.5} w="m" color={C.red}>삭제</T></Pressable>
           </Row>
         ))}
